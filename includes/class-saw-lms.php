@@ -73,6 +73,14 @@ class SAW_LMS {
 	protected $logger;
 
 	/**
+	 * Cache Manager instance
+	 *
+	 * @since  1.0.0
+	 * @var    SAW_LMS_Cache_Manager
+	 */
+	protected $cache_manager;
+
+	/**
 	 * Get the singleton instance
 	 *
 	 * @since  1.0.0
@@ -96,6 +104,7 @@ class SAW_LMS {
 
 		$this->load_dependencies();
 		$this->setup_error_handling();
+		$this->init_cache_system();
 		$this->set_locale();
 		$this->define_admin_hooks();
 		$this->define_public_hooks();
@@ -116,10 +125,21 @@ class SAW_LMS {
 		require_once SAW_LMS_PLUGIN_DIR . 'includes/utilities/functions.php';
 
 		/**
+		 * Cache system
+		 */
+		require_once SAW_LMS_PLUGIN_DIR . 'includes/cache/interface-cache-driver.php';
+		require_once SAW_LMS_PLUGIN_DIR . 'includes/cache/drivers/class-redis-driver.php';
+		require_once SAW_LMS_PLUGIN_DIR . 'includes/cache/drivers/class-db-driver.php';
+		require_once SAW_LMS_PLUGIN_DIR . 'includes/cache/drivers/class-transient-driver.php';
+		require_once SAW_LMS_PLUGIN_DIR . 'includes/cache/class-cache-manager.php';
+		require_once SAW_LMS_PLUGIN_DIR . 'includes/cache/class-cache-helper.php';
+
+		/**
 		 * Admin classes
 		 */
 		if ( is_admin() ) {
 			require_once SAW_LMS_PLUGIN_DIR . 'admin/class-admin-menu.php';
+			require_once SAW_LMS_PLUGIN_DIR . 'admin/class-cache-test-page.php';
 		}
 
 		// Initialize the loader
@@ -153,6 +173,22 @@ class SAW_LMS {
 	}
 
 	/**
+	 * Initialize cache system
+	 *
+	 * @since 1.0.0
+	 */
+	private function init_cache_system() {
+		// Initialize cache manager (auto-detects best driver)
+		$this->cache_manager = SAW_LMS_Cache_Manager::init();
+
+		// Log which driver was selected
+		$this->logger->info( 'Cache system ready', array(
+			'driver' => $this->cache_manager->get_driver_name(),
+			'available' => $this->cache_manager->is_available(),
+		) );
+	}
+
+	/**
 	 * Define the locale for this plugin for internationalization
 	 *
 	 * @since 1.0.0
@@ -172,11 +208,13 @@ class SAW_LMS {
 			return;
 		}
 
-		// Admin menu - OPRAVENO: Správné předání parametrů
+		// Admin menu
 		$admin_menu = new SAW_LMS_Admin_Menu( $this->plugin_name, $this->version );
-		
-		// OPRAVENO: Používáme add_menu místo add_admin_menu
 		$this->loader->add_action( 'admin_menu', $admin_menu, 'add_menu' );
+
+		// Cache test page
+		$cache_test = new SAW_LMS_Cache_Test_Page( $this->plugin_name, $this->version );
+		$this->loader->add_action( 'admin_menu', $cache_test, 'add_test_page' );
 
 		// Add settings link to plugins page
 		$plugin_basename = plugin_basename( SAW_LMS_PLUGIN_FILE );
@@ -268,6 +306,16 @@ class SAW_LMS {
 	 */
 	public function get_logger() {
 		return $this->logger;
+	}
+
+	/**
+	 * Get cache manager instance
+	 *
+	 * @since  1.0.0
+	 * @return SAW_LMS_Cache_Manager
+	 */
+	public function get_cache_manager() {
+		return $this->cache_manager;
 	}
 }
 

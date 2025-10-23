@@ -35,6 +35,16 @@ function saw_lms_logger() {
 }
 
 /**
+ * Get Cache Manager instance
+ *
+ * @since  1.0.0
+ * @return SAW_LMS_Cache_Manager
+ */
+function saw_lms_cache() {
+	return SAW_LMS_Cache_Manager::init();
+}
+
+/**
  * Log an error (shorthand for error handler)
  *
  * @since 1.0.0
@@ -68,7 +78,7 @@ function saw_lms_safe_get( $callback, $default = null ) {
 }
 
 /**
- * Get user enrollment details
+ * Get user enrollment details with caching
  *
  * @since  1.0.0
  * @param  int $user_id   User ID
@@ -76,24 +86,30 @@ function saw_lms_safe_get( $callback, $default = null ) {
  * @return object|null Enrollment object or null if not found
  */
 function saw_lms_get_user_enrollment( $user_id, $course_id ) {
-	global $wpdb;
-	
-	$table_name = $wpdb->prefix . 'saw_lms_enrollments';
-	
-	$enrollment = $wpdb->get_row(
-		$wpdb->prepare(
-			"SELECT * FROM {$table_name} 
-			WHERE user_id = %d 
-			AND course_id = %d 
-			AND status != 'archived'
-			ORDER BY created_at DESC 
-			LIMIT 1",
-			$user_id,
-			$course_id
-		)
-	);
-	
-	return $enrollment;
+	$cache = saw_lms_cache();
+	$cache_key = SAW_LMS_Cache_Helper::enrollment_key( $user_id, $course_id );
+
+	// Try cache first
+	return $cache->remember( $cache_key, SAW_LMS_Cache_Helper::get_ttl( 'enrollment' ), function() use ( $user_id, $course_id ) {
+		global $wpdb;
+		
+		$table_name = $wpdb->prefix . 'saw_lms_enrollments';
+		
+		$enrollment = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$table_name} 
+				WHERE user_id = %d 
+				AND course_id = %d 
+				AND status != 'archived'
+				ORDER BY created_at DESC 
+				LIMIT 1",
+				$user_id,
+				$course_id
+			)
+		);
+		
+		return $enrollment;
+	});
 }
 
 /**
@@ -127,7 +143,7 @@ function saw_lms_is_user_enrolled( $user_id, $course_id ) {
 }
 
 /**
- * Get lesson progress for user
+ * Get lesson progress for user with caching
  *
  * @since  1.0.0
  * @param  int $user_id      User ID
@@ -136,40 +152,46 @@ function saw_lms_is_user_enrolled( $user_id, $course_id ) {
  * @return object|null Progress object or null if not found
  */
 function saw_lms_get_lesson_progress( $user_id, $lesson_id, $enrollment_id = null ) {
-	global $wpdb;
-	
-	// Get enrollment ID if not provided
-	if ( ! $enrollment_id ) {
-		// Get course ID from lesson
-		$course_id = get_post_meta( $lesson_id, '_saw_lms_course_id', true );
+	$cache = saw_lms_cache();
+	$cache_key = SAW_LMS_Cache_Helper::lesson_progress_key( $user_id, $lesson_id );
+
+	// Try cache first
+	return $cache->remember( $cache_key, SAW_LMS_Cache_Helper::get_ttl( 'progress' ), function() use ( $user_id, $lesson_id, $enrollment_id ) {
+		global $wpdb;
 		
-		if ( ! $course_id ) {
-			return null;
+		// Get enrollment ID if not provided
+		if ( ! $enrollment_id ) {
+			// Get course ID from lesson
+			$course_id = get_post_meta( $lesson_id, '_saw_lms_course_id', true );
+			
+			if ( ! $course_id ) {
+				return null;
+			}
+			
+			$enrollment = saw_lms_get_user_enrollment( $user_id, $course_id );
+			
+			if ( ! $enrollment ) {
+				return null;
+			}
+			
+			$enrollment_id = $enrollment->id;
 		}
 		
-		$enrollment = saw_lms_get_user_enrollment( $user_id, $course_id );
+		$table_name = $wpdb->prefix . 'saw_lms_progress';
 		
-		if ( ! $enrollment ) {
-			return null;
-		}
+		$progress = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$table_name} 
+				WHERE enrollment_id = %d 
+				AND lesson_id = %d 
+				LIMIT 1",
+				$enrollment_id,
+				$lesson_id
+			)
+		);
 		
-		$enrollment_id = $enrollment->id;
-	}
-	
-	$table_name = $wpdb->prefix . 'saw_lms_progress';
-	
-	$progress = $wpdb->get_row(
-		$wpdb->prepare(
-			"SELECT * FROM {$table_name} 
-			WHERE enrollment_id = %d 
-			AND lesson_id = %d 
-			LIMIT 1",
-			$enrollment_id,
-			$lesson_id
-		)
-	);
-	
-	return $progress;
+		return $progress;
+	});
 }
 
 /**
@@ -247,26 +269,32 @@ function saw_lms_sanitize_array( $array ) {
 }
 
 /**
- * Get course structure
+ * Get course structure with caching
  *
  * @since  1.0.0
  * @param  int $course_id Course ID
  * @return array|null Course structure or null
  */
 function saw_lms_get_course_structure( $course_id ) {
-	$structure_json = get_post_meta( $course_id, '_saw_lms_course_structure', true );
-	
-	if ( empty( $structure_json ) ) {
-		return null;
-	}
-	
-	$structure = json_decode( $structure_json, true );
-	
-	return $structure;
+	$cache = saw_lms_cache();
+	$cache_key = SAW_LMS_Cache_Helper::course_structure_key( $course_id );
+
+	// Try cache first
+	return $cache->remember( $cache_key, SAW_LMS_Cache_Helper::get_ttl( 'structure' ), function() use ( $course_id ) {
+		$structure_json = get_post_meta( $course_id, '_saw_lms_course_structure', true );
+		
+		if ( empty( $structure_json ) ) {
+			return null;
+		}
+		
+		$structure = json_decode( $structure_json, true );
+		
+		return $structure;
+	});
 }
 
 /**
- * Calculate course completion percentage
+ * Calculate course completion percentage with caching
  *
  * @since  1.0.0
  * @param  int $user_id   User ID
@@ -274,122 +302,123 @@ function saw_lms_get_course_structure( $course_id ) {
  * @return float Completion percentage (0-100)
  */
 function saw_lms_get_course_completion( $user_id, $course_id ) {
-	global $wpdb;
-	
-	// Get enrollment
-	$enrollment = saw_lms_get_user_enrollment( $user_id, $course_id );
-	
-	if ( ! $enrollment ) {
-		return 0;
-	}
-	
-	// Get course structure
-	$structure = saw_lms_get_course_structure( $course_id );
-	
-	if ( ! $structure || empty( $structure['sections'] ) ) {
-		return 0;
-	}
-	
-	// Count total lessons and quizzes
-	$total_items = 0;
-	$lesson_ids  = array();
-	$quiz_ids    = array();
-	
-	foreach ( $structure['sections'] as $section ) {
-		if ( empty( $section['items'] ) ) {
-			continue;
+	$cache = saw_lms_cache();
+	$cache_key = SAW_LMS_Cache_Helper::user_progress_key( $user_id, $course_id );
+
+	// Try cache first
+	return $cache->remember( $cache_key, SAW_LMS_Cache_Helper::get_ttl( 'progress' ), function() use ( $user_id, $course_id ) {
+		global $wpdb;
+		
+		// Get enrollment
+		$enrollment = saw_lms_get_user_enrollment( $user_id, $course_id );
+		
+		if ( ! $enrollment ) {
+			return 0;
 		}
 		
-		foreach ( $section['items'] as $item ) {
-			$total_items++;
+		// Get course structure
+		$structure = saw_lms_get_course_structure( $course_id );
+		
+		if ( ! $structure || empty( $structure['sections'] ) ) {
+			return 0;
+		}
+		
+		// Count total lessons and quizzes
+		$total_items = 0;
+		$lesson_ids  = array();
+		$quiz_ids    = array();
+		
+		foreach ( $structure['sections'] as $section ) {
+			if ( empty( $section['items'] ) ) {
+				continue;
+			}
 			
-			if ( $item['type'] === 'lesson' ) {
-				$lesson_ids[] = $item['id'];
-			} elseif ( $item['type'] === 'quiz' ) {
-				$quiz_ids[] = $item['id'];
+			foreach ( $section['items'] as $item ) {
+				$total_items++;
+				
+				if ( $item['type'] === 'lesson' ) {
+					$lesson_ids[] = $item['id'];
+				} elseif ( $item['type'] === 'quiz' ) {
+					$quiz_ids[] = $item['id'];
+				}
 			}
 		}
-	}
-	
-	if ( $total_items === 0 ) {
-		return 0;
-	}
-	
-	// Count completed items
-	$completed = 0;
-	
-	// Count completed lessons
-	if ( ! empty( $lesson_ids ) ) {
-		$placeholders = implode( ',', array_fill( 0, count( $lesson_ids ), '%d' ) );
-		$progress_table = $wpdb->prefix . 'saw_lms_progress';
 		
-		$completed_lessons = $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT COUNT(*) FROM {$progress_table} 
-				WHERE enrollment_id = %d 
-				AND lesson_id IN ({$placeholders}) 
-				AND status = 'completed'",
-				array_merge( array( $enrollment->id ), $lesson_ids )
-			)
-		);
+		if ( $total_items === 0 ) {
+			return 0;
+		}
 		
-		$completed += $completed_lessons;
-	}
-	
-	// Count passed quizzes
-	if ( ! empty( $quiz_ids ) ) {
-		$placeholders = implode( ',', array_fill( 0, count( $quiz_ids ), '%d' ) );
-		$attempts_table = $wpdb->prefix . 'saw_lms_quiz_attempts';
+		// Count completed items
+		$completed = 0;
 		
-		$passed_quizzes = $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT COUNT(DISTINCT quiz_id) FROM {$attempts_table} 
-				WHERE enrollment_id = %d 
-				AND quiz_id IN ({$placeholders}) 
-				AND passed = 1",
-				array_merge( array( $enrollment->id ), $quiz_ids )
-			)
-		);
+		// Count completed lessons
+		if ( ! empty( $lesson_ids ) ) {
+			$placeholders = implode( ',', array_fill( 0, count( $lesson_ids ), '%d' ) );
+			$progress_table = $wpdb->prefix . 'saw_lms_progress';
+			
+			$completed_lessons = $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT COUNT(*) FROM {$progress_table} 
+					WHERE enrollment_id = %d 
+					AND lesson_id IN ({$placeholders}) 
+					AND status = 'completed'",
+					array_merge( array( $enrollment->id ), $lesson_ids )
+				)
+			);
+			
+			$completed += $completed_lessons;
+		}
 		
-		$completed += $passed_quizzes;
-	}
-	
-	// Calculate percentage
-	$percentage = ( $completed / $total_items ) * 100;
-	
-	return round( $percentage, 2 );
+		// Count passed quizzes
+		if ( ! empty( $quiz_ids ) ) {
+			$placeholders = implode( ',', array_fill( 0, count( $quiz_ids ), '%d' ) );
+			$attempts_table = $wpdb->prefix . 'saw_lms_quiz_attempts';
+			
+			$passed_quizzes = $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT COUNT(DISTINCT quiz_id) FROM {$attempts_table} 
+					WHERE enrollment_id = %d 
+					AND quiz_id IN ({$placeholders}) 
+					AND passed = 1",
+					array_merge( array( $enrollment->id ), $quiz_ids )
+				)
+			);
+			
+			$completed += $passed_quizzes;
+		}
+		
+		// Calculate percentage
+		$percentage = ( $completed / $total_items ) * 100;
+		
+		return round( $percentage, 2 );
+	});
 }
 
 /**
- * Get user's current points balance
+ * Get user's current points balance with caching
  *
  * @since  1.0.0
  * @param  int $user_id User ID
  * @return int Points balance
  */
 function saw_lms_get_user_points( $user_id ) {
-	// Try to get from cache first
-	$balance = get_user_meta( $user_id, '_saw_lms_points_balance', true );
-	
-	if ( $balance !== '' ) {
+	$cache = saw_lms_cache();
+	$cache_key = SAW_LMS_Cache_Helper::user_points_key( $user_id );
+
+	// Try cache first
+	return $cache->remember( $cache_key, SAW_LMS_Cache_Helper::get_ttl( 'balance' ), function() use ( $user_id ) {
+		global $wpdb;
+		$table_name = $wpdb->prefix . 'saw_lms_points_ledger';
+		
+		$balance = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COALESCE(SUM(amount), 0) FROM {$table_name} WHERE user_id = %d",
+				$user_id
+			)
+		);
+		
 		return (int) $balance;
-	}
-	
-	// Calculate from ledger
-	global $wpdb;
-	$table_name = $wpdb->prefix . 'saw_lms_points_ledger';
-	
-	$balance = $wpdb->get_var(
-		$wpdb->prepare(
-			"SELECT COALESCE(SUM(amount), 0) FROM {$table_name} WHERE user_id = %d",
-			$user_id
-		)
-	);
-	
-	// Update cache
-	update_user_meta( $user_id, '_saw_lms_points_balance', $balance );
-	
-	return (int) $balance;
+	});
 }
 
 /**
