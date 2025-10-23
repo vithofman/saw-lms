@@ -1,15 +1,19 @@
 <?php
 /**
- * Redis Cache Driver
+ * Redis Cache Driver - FIXED VERSION
  * 
  * Implements caching using Redis with hybrid approach:
  * 1. First tries to use WP_Object_Cache (if Redis plugin is active)
  * 2. Falls back to direct Redis connection
  * 3. Provides best performance for high-traffic sites
  *
+ * CRITICAL FIX: Uses unique prefix per website to prevent data collisions
+ * on shared Redis servers (required by hosting providers like Hetzner).
+ *
  * @package    SAW_LMS
  * @subpackage SAW_LMS/includes/cache/drivers
  * @since      1.0.0
+ * @version    1.0.1 - Fixed unique prefix for shared Redis
  */
 
 // If this file is called directly, abort.
@@ -41,12 +45,12 @@ class SAW_LMS_Redis_Driver implements SAW_LMS_Cache_Driver {
 	private $use_wp_cache = false;
 
 	/**
-	 * Cache key prefix
+	 * Cache key prefix (UNIQUE per website!)
 	 *
 	 * @since  1.0.0
 	 * @var    string
 	 */
-	private $prefix = 'saw_lms_';
+	private $prefix = '';
 
 	/**
 	 * Constructor
@@ -54,7 +58,45 @@ class SAW_LMS_Redis_Driver implements SAW_LMS_Cache_Driver {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
+		// CRITICAL: Set unique prefix BEFORE init connection
+		$this->set_unique_prefix();
 		$this->init_connection();
+	}
+
+	/**
+	 * Set unique cache prefix for this website
+	 *
+	 * This is CRITICAL for shared Redis servers to prevent data collisions.
+	 * 
+	 * Priority:
+	 * 1. SAW_LMS_REDIS_PREFIX constant (set in wp-config.php)
+	 * 2. Auto-generated from site URL hash
+	 *
+	 * @since 1.0.1
+	 */
+	private function set_unique_prefix() {
+		// Option 1: Manual prefix from wp-config.php (recommended)
+		if ( defined( 'SAW_LMS_REDIS_PREFIX' ) && ! empty( SAW_LMS_REDIS_PREFIX ) ) {
+			$this->prefix = SAW_LMS_REDIS_PREFIX;
+			
+			SAW_LMS_Logger::init()->debug( 'Redis: Using manual prefix from wp-config.php', array(
+				'prefix' => $this->prefix,
+			) );
+			
+			return;
+		}
+
+		// Option 2: Auto-generate unique prefix from site URL
+		$site_url = get_site_url();
+		$site_hash = substr( md5( $site_url ), 0, 8 ); // 8 characters is enough
+		
+		$this->prefix = 'saw_lms_' . $site_hash . '_';
+		
+		SAW_LMS_Logger::init()->info( 'Redis: Auto-generated unique prefix', array(
+			'prefix'   => $this->prefix,
+			'site_url' => $site_url,
+			'note'     => 'Consider setting SAW_LMS_REDIS_PREFIX in wp-config.php for consistency',
+		) );
 	}
 
 	/**
@@ -100,9 +142,10 @@ class SAW_LMS_Redis_Driver implements SAW_LMS_Cache_Driver {
 				}
 
 				SAW_LMS_Logger::init()->debug( 'Redis driver: Direct connection established', array(
-					'host' => $host,
-					'port' => $port,
+					'host'     => $host,
+					'port'     => $port,
 					'database' => $database,
+					'prefix'   => $this->prefix,
 				) );
 
 			} catch ( Exception $e ) {
@@ -145,7 +188,7 @@ class SAW_LMS_Redis_Driver implements SAW_LMS_Cache_Driver {
 	 *
 	 * @since  1.0.0
 	 * @param  string $key Original key
-	 * @return string      Prefixed key
+	 * @return string      Prefixed key with unique website identifier
 	 */
 	private function get_prefixed_key( $key ) {
 		return $this->prefix . $key;
@@ -174,7 +217,7 @@ class SAW_LMS_Redis_Driver implements SAW_LMS_Cache_Driver {
 
 		} catch ( Exception $e ) {
 			SAW_LMS_Logger::init()->error( 'Redis get failed', array(
-				'key' => $key,
+				'key'   => $key,
 				'error' => $e->getMessage(),
 			) );
 		}
@@ -205,8 +248,8 @@ class SAW_LMS_Redis_Driver implements SAW_LMS_Cache_Driver {
 
 		} catch ( Exception $e ) {
 			SAW_LMS_Logger::init()->error( 'Redis set failed', array(
-				'key' => $key,
-				'ttl' => $ttl,
+				'key'   => $key,
+				'ttl'   => $ttl,
 				'error' => $e->getMessage(),
 			) );
 		}
@@ -231,7 +274,7 @@ class SAW_LMS_Redis_Driver implements SAW_LMS_Cache_Driver {
 
 		} catch ( Exception $e ) {
 			SAW_LMS_Logger::init()->error( 'Redis delete failed', array(
-				'key' => $key,
+				'key'   => $key,
 				'error' => $e->getMessage(),
 			) );
 		}
@@ -245,19 +288,26 @@ class SAW_LMS_Redis_Driver implements SAW_LMS_Cache_Driver {
 	public function flush() {
 		try {
 			if ( $this->use_wp_cache ) {
-				return wp_cache_flush();
+				// SECURITY: Only flush saw_lms group, not entire cache
+				wp_cache_flush_group( 'saw_lms' );
+				return true;
 			}
 
 			if ( $this->redis ) {
-				// Only delete keys with our prefix (safer than FLUSHDB)
+				// SECURITY: Only delete keys with OUR UNIQUE prefix
+				// This is CRITICAL for shared Redis - never use FLUSHDB or FLUSHALL!
 				$keys = $this->redis->keys( $this->prefix . '*' );
 				
 				if ( empty( $keys ) ) {
 					return true;
 				}
 
-				foreach ( $keys as $key ) {
-					$this->redis->del( $key );
+				// Delete in batches for performance
+				$batch_size = 1000;
+				$batches = array_chunk( $keys, $batch_size );
+				
+				foreach ( $batches as $batch ) {
+					$this->redis->del( $batch );
 				}
 
 				return true;
@@ -289,7 +339,7 @@ class SAW_LMS_Redis_Driver implements SAW_LMS_Cache_Driver {
 
 		} catch ( Exception $e ) {
 			SAW_LMS_Logger::init()->error( 'Redis exists check failed', array(
-				'key' => $key,
+				'key'   => $key,
 				'error' => $e->getMessage(),
 			) );
 		}
@@ -333,7 +383,7 @@ class SAW_LMS_Redis_Driver implements SAW_LMS_Cache_Driver {
 		} catch ( Exception $e ) {
 			SAW_LMS_Logger::init()->error( 'Redis get_multiple failed', array(
 				'keys_count' => count( $keys ),
-				'error' => $e->getMessage(),
+				'error'      => $e->getMessage(),
 			) );
 		}
 
@@ -381,7 +431,7 @@ class SAW_LMS_Redis_Driver implements SAW_LMS_Cache_Driver {
 		} catch ( Exception $e ) {
 			SAW_LMS_Logger::init()->error( 'Redis set_multiple failed', array(
 				'values_count' => count( $values ),
-				'error' => $e->getMessage(),
+				'error'        => $e->getMessage(),
 			) );
 		}
 
@@ -410,9 +460,9 @@ class SAW_LMS_Redis_Driver implements SAW_LMS_Cache_Driver {
 
 		} catch ( Exception $e ) {
 			SAW_LMS_Logger::init()->error( 'Redis increment failed', array(
-				'key' => $key,
+				'key'    => $key,
 				'offset' => $offset,
-				'error' => $e->getMessage(),
+				'error'  => $e->getMessage(),
 			) );
 		}
 
@@ -441,9 +491,9 @@ class SAW_LMS_Redis_Driver implements SAW_LMS_Cache_Driver {
 
 		} catch ( Exception $e ) {
 			SAW_LMS_Logger::init()->error( 'Redis decrement failed', array(
-				'key' => $key,
+				'key'    => $key,
 				'offset' => $offset,
-				'error' => $e->getMessage(),
+				'error'  => $e->getMessage(),
 			) );
 		}
 
@@ -481,6 +531,16 @@ class SAW_LMS_Redis_Driver implements SAW_LMS_Cache_Driver {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Get current prefix (for debugging)
+	 *
+	 * @since  1.0.1
+	 * @return string Current cache prefix
+	 */
+	public function get_prefix() {
+		return $this->prefix;
 	}
 
 	/**
