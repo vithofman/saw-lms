@@ -172,14 +172,14 @@ class SAW_LMS {
 			return;
 		}
 
-		// Admin menu
-		$admin_menu = new SAW_LMS_Admin_Menu();
-		$this->loader->add_action( 'admin_menu', $admin_menu, 'add_admin_menu' );
-		$this->loader->add_action( 'admin_enqueue_scripts', $admin_menu, 'enqueue_styles' );
-		$this->loader->add_action( 'admin_enqueue_scripts', $admin_menu, 'enqueue_scripts' );
+		// Admin menu - OPRAVENO: Správné předání parametrů
+		$admin_menu = new SAW_LMS_Admin_Menu( $this->plugin_name, $this->version );
+		
+		// OPRAVENO: Používáme add_menu místo add_admin_menu
+		$this->loader->add_action( 'admin_menu', $admin_menu, 'add_menu' );
 
 		// Add settings link to plugins page
-		$plugin_basename = plugin_basename( SAW_LMS_PLUGIN_DIR . 'saw-lms.php' );
+		$plugin_basename = plugin_basename( SAW_LMS_PLUGIN_FILE );
 		$this->loader->add_filter( 'plugin_action_links_' . $plugin_basename, $this, 'add_action_links' );
 	}
 

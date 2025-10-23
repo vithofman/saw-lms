@@ -22,6 +22,11 @@ if ( ! defined( 'WPINC' ) ) {
 class SAW_LMS_Activator {
 
 	/**
+	 * Database version
+	 */
+	const DB_VERSION = '1.0.0';
+
+	/**
 	 * Plugin activation hook
 	 * 
 	 * Creates all database tables and sets up initial configuration
@@ -55,6 +60,9 @@ class SAW_LMS_Activator {
 		
 		// Flush rewrite rules
 		flush_rewrite_rules();
+		
+		// OPRAVENO: Uložení DB verze
+		update_option( 'saw_lms_db_version', self::DB_VERSION );
 	}
 	
 	/**
@@ -458,6 +466,16 @@ class SAW_LMS_Activator {
 	 * @since 1.0.0
 	 */
 	private static function set_default_options() {
+		// OPRAVENO: Ukládáme jako jednotlivé options
+		update_option( 'saw_lms_version', SAW_LMS_VERSION );
+		update_option( 'saw_lms_installed_at', current_time( 'mysql' ) );
+		update_option( 'saw_lms_enable_certificates', true );
+		update_option( 'saw_lms_enable_gamification', true );
+		update_option( 'saw_lms_points_per_lesson', 10 );
+		update_option( 'saw_lms_points_per_quiz', 20 );
+		update_option( 'saw_lms_min_watch_percentage', 80 );
+		
+		// Také můžeme uložit kompletní settings array
 		$default_settings = array(
 			'version'           => SAW_LMS_VERSION,
 			'installed_at'      => current_time( 'mysql' ),

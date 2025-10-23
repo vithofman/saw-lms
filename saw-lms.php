@@ -69,7 +69,7 @@ function saw_lms_activate() {
     saw_lms_check_requirements();
     
     // Načtení aktivátoru
-    require_once SAW_LMS_PLUGIN_DIR . 'includes/class-activator.php';
+    require_once SAW_LMS_PLUGIN_DIR . 'includes/core/class-activator.php';
     SAW_LMS_Activator::activate();
 }
 register_activation_hook(__FILE__, 'saw_lms_activate');
@@ -78,7 +78,7 @@ register_activation_hook(__FILE__, 'saw_lms_activate');
  * Hook pro deaktivaci pluginu
  */
 function saw_lms_deactivate() {
-    require_once SAW_LMS_PLUGIN_DIR . 'includes/class-deactivator.php';
+    require_once SAW_LMS_PLUGIN_DIR . 'includes/core/class-deactivator.php';
     SAW_LMS_Deactivator::deactivate();
 }
 register_deactivation_hook(__FILE__, 'saw_lms_deactivate');
@@ -92,7 +92,8 @@ require_once SAW_LMS_PLUGIN_DIR . 'includes/class-saw-lms.php';
  * Spuštění pluginu
  */
 function saw_lms_run() {
-    $plugin = SAW_LMS::get_instance();
+    // OPRAVENO: Změna get_instance() na init()
+    $plugin = SAW_LMS::init();
     $plugin->run();
 }
 
