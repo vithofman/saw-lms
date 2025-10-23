@@ -4,9 +4,12 @@
  *
  * Handles plugin activation - creates database tables and sets up initial configuration
  *
+ * UPDATED in Phase 2.1: Added Custom Post Types registration and flush rewrite rules.
+ *
  * @package    SAW_LMS
  * @subpackage SAW_LMS/includes
  * @since      1.0.0
+ * @version    2.1.0
  */
 
 // If this file is called directly, abort.
@@ -24,12 +27,14 @@ class SAW_LMS_Activator {
 	/**
 	 * Database version
 	 */
-	const DB_VERSION = '1.0.0';
+	const DB_VERSION = '2.1.0';
 
 	/**
 	 * Plugin activation hook
 	 *
 	 * Creates all database tables and sets up initial configuration
+	 *
+	 * UPDATED in Phase 2.1: Added CPT registration before flush rewrite rules.
 	 *
 	 * @since 1.0.0
 	 */
@@ -58,10 +63,36 @@ class SAW_LMS_Activator {
 		// Set default options
 		self::set_default_options();
 
-		// Flush rewrite rules
+		// --- NEW in Phase 2.1: Register CPTs before flush ---
+
+		// Require CPT classes
+		require_once SAW_LMS_PLUGIN_DIR . 'includes/post-types/class-course.php';
+		require_once SAW_LMS_PLUGIN_DIR . 'includes/post-types/class-section.php';
+		require_once SAW_LMS_PLUGIN_DIR . 'includes/post-types/class-lesson.php';
+		require_once SAW_LMS_PLUGIN_DIR . 'includes/post-types/class-quiz.php';
+
+		// Initialize CPTs (registers post types)
+		SAW_LMS_Course::init();
+		SAW_LMS_Section::init();
+		SAW_LMS_Lesson::init();
+		SAW_LMS_Quiz::init();
+
+		// Flush rewrite rules - CRITICAL!
 		flush_rewrite_rules();
 
-		// OPRAVENO: Uložení DB verze
+		// Log activation if logger is available
+		if ( class_exists( 'SAW_LMS_Logger' ) ) {
+			$logger = SAW_LMS_Logger::init();
+			$logger->info(
+				'Plugin activated - post types registered',
+				array(
+					'db_version' => self::DB_VERSION,
+					'wp_version' => get_bloginfo( 'version' ),
+				)
+			);
+		}
+
+		// Save DB version
 		update_option( 'saw_lms_db_version', self::DB_VERSION );
 	}
 
@@ -259,7 +290,7 @@ class SAW_LMS_Activator {
 	}
 
 	/**
-	 * Create versioning and compliance tables
+	 * Create versioning tables
 	 *
 	 * @since 1.0.0
 	 * @param string $prefix Database prefix
@@ -272,7 +303,7 @@ class SAW_LMS_Activator {
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			entity_type varchar(50) NOT NULL,
 			entity_id bigint(20) unsigned NOT NULL,
-			version_number varchar(20) NOT NULL,
+			version_number int(11) NOT NULL,
 			content_hash varchar(64) NOT NULL,
 			snapshot_json longtext NOT NULL,
 			created_by bigint(20) unsigned NOT NULL,
@@ -466,7 +497,7 @@ class SAW_LMS_Activator {
 	 * @since 1.0.0
 	 */
 	private static function set_default_options() {
-		// OPRAVENO: Ukládáme jako jednotlivé options
+		// Individual options
 		update_option( 'saw_lms_version', SAW_LMS_VERSION );
 		update_option( 'saw_lms_installed_at', current_time( 'mysql' ) );
 		update_option( 'saw_lms_enable_certificates', true );
@@ -475,7 +506,7 @@ class SAW_LMS_Activator {
 		update_option( 'saw_lms_points_per_quiz', 20 );
 		update_option( 'saw_lms_min_watch_percentage', 80 );
 
-		// Také můžeme uložit kompletní settings array
+		// Complete settings array
 		$default_settings = array(
 			'version'               => SAW_LMS_VERSION,
 			'installed_at'          => current_time( 'mysql' ),

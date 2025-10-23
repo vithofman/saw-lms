@@ -6,11 +6,12 @@
  * public-facing site hooks.
  *
  * UPDATED in Phase 1.9: Added Admin Assets loader for new design system.
+ * UPDATED in Phase 2.1: Added Custom Post Types initialization.
  *
  * @package    SAW_LMS
  * @subpackage SAW_LMS/includes
  * @since      1.0.0
- * @version    1.9.0
+ * @version    2.1.0
  */
 
 // If this file is called directly, abort.
@@ -99,6 +100,8 @@ class SAW_LMS {
 	/**
 	 * Constructor
 	 *
+	 * UPDATED in Phase 2.1: Added init_post_types() call.
+	 *
 	 * @since 1.0.0
 	 */
 	private function __construct() {
@@ -106,6 +109,7 @@ class SAW_LMS {
 		$this->version     = SAW_LMS_VERSION;
 
 		$this->load_dependencies();
+		$this->init_post_types();        // NEW in Phase 2.1
 		$this->setup_error_handling();
 		$this->init_cache_system();
 		$this->set_locale();
@@ -150,6 +154,35 @@ class SAW_LMS {
 
 		// Initialize the loader
 		$this->loader = new SAW_LMS_Loader();
+	}
+
+	/**
+	 * Initialize Custom Post Types
+	 *
+	 * Loads and initializes all custom post type classes.
+	 *
+	 * @since 2.1.0
+	 * @return void
+	 */
+	private function init_post_types() {
+		// Require CPT classes
+		require_once SAW_LMS_PLUGIN_DIR . 'includes/post-types/class-course.php';
+		require_once SAW_LMS_PLUGIN_DIR . 'includes/post-types/class-section.php';
+		require_once SAW_LMS_PLUGIN_DIR . 'includes/post-types/class-lesson.php';
+		require_once SAW_LMS_PLUGIN_DIR . 'includes/post-types/class-quiz.php';
+
+		// Initialize singletons
+		SAW_LMS_Course::init();
+		SAW_LMS_Section::init();
+		SAW_LMS_Lesson::init();
+		SAW_LMS_Quiz::init();
+
+		/**
+		 * Fires after all post types are initialized.
+		 *
+		 * @since 2.1.0
+		 */
+		do_action( 'saw_lms_post_types_initialized' );
 	}
 
 	/**
