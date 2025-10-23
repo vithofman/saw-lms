@@ -3,11 +3,12 @@
  * Lesson Custom Post Type
  *
  * Handles registration and functionality for the Lesson CPT.
- * Lessons can be of different types: video, text, or document.
+ * Lessons can be of different types: video, text, document, or assignment.
  *
  * @package     SAW_LMS
  * @subpackage  Post_Types
  * @since       2.1.0
+ * @version     2.1.1
  */
 
 // Exit if accessed directly.
@@ -38,9 +39,10 @@ class SAW_LMS_Lesson {
 	 * @var array
 	 */
 	const LESSON_TYPES = array(
-		'video'    => 'Video',
-		'text'     => 'Text',
-		'document' => 'Document',
+		'video'      => 'Video',
+		'text'       => 'Text',
+		'document'   => 'Document',
+		'assignment' => 'Assignment',
 	);
 
 	/**
@@ -292,6 +294,8 @@ class SAW_LMS_Lesson {
 	/**
 	 * Render Lesson Content meta box
 	 *
+	 * Conditional fields based on lesson type.
+	 *
 	 * @since 2.1.0
 	 * @param WP_Post $post Current post object.
 	 * @return void
@@ -301,24 +305,30 @@ class SAW_LMS_Lesson {
 		wp_nonce_field( 'saw_lms_lesson_content', 'saw_lms_lesson_content_nonce' );
 
 		// Get current values.
-		$lesson_type  = get_post_meta( $post->ID, '_saw_lms_lesson_type', true );
-		$video_url    = get_post_meta( $post->ID, '_saw_lms_video_url', true );
-		$video_source = get_post_meta( $post->ID, '_saw_lms_video_source', true );
-		$document_url = get_post_meta( $post->ID, '_saw_lms_document_url', true );
+		$lesson_type   = get_post_meta( $post->ID, '_saw_lms_lesson_type', true );
+		$video_source  = get_post_meta( $post->ID, '_saw_lms_video_source', true );
+		$video_url     = get_post_meta( $post->ID, '_saw_lms_video_url', true );
+		$document_url  = get_post_meta( $post->ID, '_saw_lms_document_url', true );
+		$assignment_max_points = get_post_meta( $post->ID, '_saw_lms_assignment_max_points', true );
+		$assignment_passing_points = get_post_meta( $post->ID, '_saw_lms_assignment_passing_points', true );
+		$assignment_allow_resubmit = get_post_meta( $post->ID, '_saw_lms_assignment_allow_resubmit', true );
 
 		// Defaults.
-		$lesson_type  = ! empty( $lesson_type ) ? $lesson_type : 'video';
-		$video_url    = ! empty( $video_url ) ? $video_url : '';
-		$video_source = ! empty( $video_source ) ? $video_source : 'youtube';
-		$document_url = ! empty( $document_url ) ? $document_url : '';
+		$lesson_type   = ! empty( $lesson_type ) ? $lesson_type : 'video';
+		$video_source  = ! empty( $video_source ) ? $video_source : 'youtube';
+		$video_url     = ! empty( $video_url ) ? $video_url : '';
+		$document_url  = ! empty( $document_url ) ? $document_url : '';
+		$assignment_max_points = ! empty( $assignment_max_points ) ? $assignment_max_points : 100;
+		$assignment_passing_points = ! empty( $assignment_passing_points ) ? $assignment_passing_points : 70;
+		$assignment_allow_resubmit = ! empty( $assignment_allow_resubmit ) ? 1 : 0;
 
 		?>
-		<div class="saw-lms-meta-box saw-lms-lesson-content">
-			<!-- Video Content -->
-			<div class="saw-lms-content-type" id="saw-lms-video-content" style="<?php echo 'video' === $lesson_type ? '' : 'display:none;'; ?>">
-				<h3><?php esc_html_e( 'Video Settings', 'saw-lms' ); ?></h3>
+		<div class="saw-lms-lesson-content">
+			<!-- Video Content (conditional) -->
+			<div class="saw-lms-content-section saw-lms-video-content" style="display: none;">
 				<table class="form-table">
 					<tbody>
+						<!-- Video Source -->
 						<tr>
 							<th scope="row">
 								<label for="saw_lms_video_source"><?php esc_html_e( 'Video Source', 'saw-lms' ); ?></label>
@@ -331,9 +341,11 @@ class SAW_LMS_Lesson {
 								</select>
 							</td>
 						</tr>
+
+						<!-- Video URL -->
 						<tr>
 							<th scope="row">
-								<label for="saw_lms_video_url"><?php esc_html_e( 'Video URL or Embed Code', 'saw-lms' ); ?></label>
+								<label for="saw_lms_video_url"><?php esc_html_e( 'Video URL / Embed Code', 'saw-lms' ); ?></label>
 							</th>
 							<td>
 								<textarea 
@@ -341,10 +353,11 @@ class SAW_LMS_Lesson {
 									name="saw_lms_video_url" 
 									rows="4" 
 									class="large-text"
-									placeholder="<?php esc_attr_e( 'Enter YouTube/Vimeo URL or embed code...', 'saw-lms' ); ?>"
 								><?php echo esc_textarea( $video_url ); ?></textarea>
 								<p class="description">
-									<?php esc_html_e( 'Example: https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'saw-lms' ); ?>
+									<?php esc_html_e( 'YouTube: https://www.youtube.com/watch?v=...', 'saw-lms' ); ?><br>
+									<?php esc_html_e( 'Vimeo: https://vimeo.com/...', 'saw-lms' ); ?><br>
+									<?php esc_html_e( 'Embed: Paste iframe embed code', 'saw-lms' ); ?>
 								</p>
 							</td>
 						</tr>
@@ -352,43 +365,154 @@ class SAW_LMS_Lesson {
 				</table>
 			</div>
 
-			<!-- Text Content -->
-			<div class="saw-lms-content-type" id="saw-lms-text-content" style="<?php echo 'text' === $lesson_type ? '' : 'display:none;'; ?>">
-				<h3><?php esc_html_e( 'Text Content', 'saw-lms' ); ?></h3>
-				<p class="description">
-					<?php esc_html_e( 'Use the main editor above to add text content for this lesson.', 'saw-lms' ); ?>
-				</p>
+			<!-- Text Content (conditional) -->
+			<div class="saw-lms-content-section saw-lms-text-content" style="display: none;">
+				<p><?php esc_html_e( 'Use the main editor above to write text content for this lesson.', 'saw-lms' ); ?></p>
 			</div>
 
-			<!-- Document Content -->
-			<div class="saw-lms-content-type" id="saw-lms-document-content" style="<?php echo 'document' === $lesson_type ? '' : 'display:none;'; ?>">
-				<h3><?php esc_html_e( 'Document Settings', 'saw-lms' ); ?></h3>
+			<!-- Document Content (conditional) -->
+			<div class="saw-lms-content-section saw-lms-document-content" style="display: none;">
 				<table class="form-table">
 					<tbody>
 						<tr>
 							<th scope="row">
-								<label for="saw_lms_document_url"><?php esc_html_e( 'Document URL', 'saw-lms' ); ?></label>
+								<label for="saw_lms_document_url"><?php esc_html_e( 'Document', 'saw-lms' ); ?></label>
 							</th>
 							<td>
 								<input 
-									type="url" 
+									type="text" 
 									id="saw_lms_document_url" 
 									name="saw_lms_document_url" 
-									value="<?php echo esc_url( $document_url ); ?>" 
+									value="<?php echo esc_attr( $document_url ); ?>" 
 									class="regular-text"
-									placeholder="<?php esc_attr_e( 'https://example.com/document.pdf', 'saw-lms' ); ?>"
+									readonly
 								/>
 								<button type="button" class="button saw-lms-upload-document">
 									<?php esc_html_e( 'Upload Document', 'saw-lms' ); ?>
 								</button>
 								<p class="description">
-									<?php esc_html_e( 'Upload or paste URL to PDF, DOC, DOCX, or other document.', 'saw-lms' ); ?>
+									<?php esc_html_e( 'Upload a PDF, Word, PowerPoint, or other document file.', 'saw-lms' ); ?>
 								</p>
 							</td>
 						</tr>
 					</tbody>
 				</table>
 			</div>
+
+			<!-- Assignment Content (conditional) - NEW in v2.1.1 -->
+			<div class="saw-lms-content-section saw-lms-assignment-content" style="display: none;">
+				<table class="form-table">
+					<tbody>
+						<!-- Assignment Instructions -->
+						<tr>
+							<th scope="row" colspan="2">
+								<label><?php esc_html_e( 'Assignment Instructions', 'saw-lms' ); ?></label>
+								<p class="description">
+									<?php esc_html_e( 'Use the main editor above to write detailed instructions for this assignment.', 'saw-lms' ); ?>
+								</p>
+							</th>
+						</tr>
+
+						<!-- Max Points -->
+						<tr>
+							<th scope="row">
+								<label for="saw_lms_assignment_max_points"><?php esc_html_e( 'Maximum Points', 'saw-lms' ); ?></label>
+							</th>
+							<td>
+								<input 
+									type="number" 
+									id="saw_lms_assignment_max_points" 
+									name="saw_lms_assignment_max_points" 
+									value="<?php echo esc_attr( $assignment_max_points ); ?>" 
+									min="0" 
+									step="1" 
+									class="small-text"
+								/>
+								<p class="description"><?php esc_html_e( 'Maximum points this assignment is worth.', 'saw-lms' ); ?></p>
+							</td>
+						</tr>
+
+						<!-- Passing Points -->
+						<tr>
+							<th scope="row">
+								<label for="saw_lms_assignment_passing_points"><?php esc_html_e( 'Passing Points', 'saw-lms' ); ?></label>
+							</th>
+							<td>
+								<input 
+									type="number" 
+									id="saw_lms_assignment_passing_points" 
+									name="saw_lms_assignment_passing_points" 
+									value="<?php echo esc_attr( $assignment_passing_points ); ?>" 
+									min="0" 
+									step="1" 
+									class="small-text"
+								/>
+								<p class="description"><?php esc_html_e( 'Minimum points required to pass this assignment.', 'saw-lms' ); ?></p>
+							</td>
+						</tr>
+
+						<!-- Allow Resubmit -->
+						<tr>
+							<th scope="row">
+								<label for="saw_lms_assignment_allow_resubmit"><?php esc_html_e( 'Resubmissions', 'saw-lms' ); ?></label>
+							</th>
+							<td>
+								<label>
+									<input 
+										type="checkbox" 
+										id="saw_lms_assignment_allow_resubmit" 
+										name="saw_lms_assignment_allow_resubmit" 
+										value="1" 
+										<?php checked( $assignment_allow_resubmit, 1 ); ?>
+									/>
+									<?php esc_html_e( 'Allow students to resubmit after grading', 'saw-lms' ); ?>
+								</label>
+							</td>
+						</tr>
+
+						<!-- Submission Note -->
+						<tr>
+							<th scope="row" colspan="2">
+								<div class="saw-lms-info-box" style="background: #e7f3fe; border-left: 4px solid #2196F3; padding: 12px; margin-top: 10px;">
+									<p style="margin: 0;">
+										<strong><?php esc_html_e( 'ℹ️ Note:', 'saw-lms' ); ?></strong>
+										<?php esc_html_e( 'Students will be able to upload files or submit text as their assignment. Grading interface will be available in the Reports section (Phase 17).', 'saw-lms' ); ?>
+									</p>
+								</div>
+							</th>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+
+			<script type="text/javascript">
+				// Show/hide conditional fields based on lesson type
+				jQuery(document).ready(function($) {
+					function toggleContentSections() {
+						var lessonType = $('#saw_lms_lesson_type').val();
+						
+						// Hide all content sections
+						$('.saw-lms-content-section').hide();
+						
+						// Show relevant section
+						if (lessonType === 'video') {
+							$('.saw-lms-video-content').show();
+						} else if (lessonType === 'text') {
+							$('.saw-lms-text-content').show();
+						} else if (lessonType === 'document') {
+							$('.saw-lms-document-content').show();
+						} else if (lessonType === 'assignment') {
+							$('.saw-lms-assignment-content').show();
+						}
+					}
+					
+					// Initial state
+					toggleContentSections();
+					
+					// On change
+					$('#saw_lms_lesson_type').on('change', toggleContentSections);
+				});
+			</script>
 		</div>
 		<?php
 	}
@@ -402,13 +526,14 @@ class SAW_LMS_Lesson {
 	 * @return void
 	 */
 	public function save_meta_boxes( $post_id, $post ) {
+		// Skip autosave.
+		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+			return;
+		}
+
 		// Security checks for settings.
 		if ( isset( $_POST['saw_lms_lesson_settings_nonce'] ) ) {
 			if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['saw_lms_lesson_settings_nonce'] ) ), 'saw_lms_lesson_settings' ) ) {
-				return;
-			}
-
-			if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
 				return;
 			}
 
@@ -419,8 +544,11 @@ class SAW_LMS_Lesson {
 			// Save section ID.
 			if ( isset( $_POST['saw_lms_section_id'] ) ) {
 				$section_id = absint( $_POST['saw_lms_section_id'] );
-				if ( SAW_LMS_Section::section_exists( $section_id ) ) {
-					update_post_meta( $post_id, '_saw_lms_section_id', $section_id );
+				if ( $section_id > 0 ) {
+					// Validate section exists.
+					if ( SAW_LMS_Section::section_exists( $section_id ) ) {
+						update_post_meta( $post_id, '_saw_lms_section_id', $section_id );
+					}
 				}
 			}
 
@@ -474,6 +602,20 @@ class SAW_LMS_Lesson {
 				$document_url = esc_url_raw( wp_unslash( $_POST['saw_lms_document_url'] ) );
 				update_post_meta( $post_id, '_saw_lms_document_url', $document_url );
 			}
+
+			// Save assignment settings (NEW in v2.1.1).
+			if ( isset( $_POST['saw_lms_assignment_max_points'] ) ) {
+				$max_points = absint( $_POST['saw_lms_assignment_max_points'] );
+				update_post_meta( $post_id, '_saw_lms_assignment_max_points', $max_points );
+			}
+
+			if ( isset( $_POST['saw_lms_assignment_passing_points'] ) ) {
+				$passing_points = absint( $_POST['saw_lms_assignment_passing_points'] );
+				update_post_meta( $post_id, '_saw_lms_assignment_passing_points', $passing_points );
+			}
+
+			$allow_resubmit = isset( $_POST['saw_lms_assignment_allow_resubmit'] ) ? 1 : 0;
+			update_post_meta( $post_id, '_saw_lms_assignment_allow_resubmit', $allow_resubmit );
 		}
 
 		// Invalidate cache.
@@ -541,8 +683,15 @@ class SAW_LMS_Lesson {
 			case 'lesson_type':
 				$type = get_post_meta( $post_id, '_saw_lms_lesson_type', true );
 				if ( ! empty( $type ) && isset( self::LESSON_TYPES[ $type ] ) ) {
+					$type_icons = array(
+						'video'      => '🎥',
+						'text'       => '📝',
+						'document'   => '📄',
+						'assignment' => '✍️',
+					);
+					$icon = isset( $type_icons[ $type ] ) ? $type_icons[ $type ] : '';
 					echo '<span class="saw-lms-type saw-lms-type-' . esc_attr( $type ) . '">';
-					echo esc_html( self::LESSON_TYPES[ $type ] );
+					echo esc_html( $icon . ' ' . self::LESSON_TYPES[ $type ] );
 					echo '</span>';
 				} else {
 					echo '—';
@@ -603,16 +752,16 @@ class SAW_LMS_Lesson {
 
 		// Enqueue admin styles.
 		wp_enqueue_style(
-			'saw-lms-lesson-admin',
-			SAW_LMS_URL . 'assets/css/admin/lesson.css',
+			'saw-lms-lesson-meta-box',
+			SAW_LMS_URL . 'assets/css/admin/lesson-meta-box.css',
 			array(),
 			SAW_LMS_VERSION
 		);
 
 		// Enqueue admin scripts.
 		wp_enqueue_script(
-			'saw-lms-lesson-admin',
-			SAW_LMS_URL . 'assets/js/admin/lesson.js',
+			'saw-lms-lesson-meta-box',
+			SAW_LMS_URL . 'assets/js/admin/lesson-meta-box.js',
 			array( 'jquery' ),
 			SAW_LMS_VERSION,
 			true
@@ -620,15 +769,15 @@ class SAW_LMS_Lesson {
 
 		// Localize script data.
 		wp_localize_script(
-			'saw-lms-lesson-admin',
+			'saw-lms-lesson-meta-box',
 			'sawLmsLesson',
 			array(
 				'postId' => get_the_ID(),
 				'nonce'  => wp_create_nonce( 'saw_lms_lesson_admin' ),
 				'i18n'   => array(
-					'selectDocument'  => __( 'Select Document', 'saw-lms' ),
-					'useDocument'     => __( 'Use This Document', 'saw-lms' ),
-					'documentUploaded' => __( 'Document uploaded successfully!', 'saw-lms' ),
+					'selectDocument'    => __( 'Select Document', 'saw-lms' ),
+					'useDocument'       => __( 'Use This Document', 'saw-lms' ),
+					'documentUploaded'  => __( 'Document uploaded successfully!', 'saw-lms' ),
 				),
 			)
 		);
