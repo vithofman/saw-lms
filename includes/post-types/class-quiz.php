@@ -465,7 +465,7 @@ class SAW_LMS_Quiz {
 
 			<?php if ( empty( $course_id ) ) : ?>
 				<p class="saw-lms-info-box" style="background: #fff3cd; border-left: 3px solid #ffc107; padding: 10px; margin-top: 15px; font-size: 12px;">
-					<strong><?php esc_html_e( ℹ️ Info:', 'saw-lms' ); ?></strong>
+					<strong><?php esc_html_e( 'Info:', 'saw-lms' ); ?></strong>
 					<?php esc_html_e( 'Select a course first to enable section selection.', 'saw-lms' ); ?>
 				</p>
 			<?php endif; ?>
