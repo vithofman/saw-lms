@@ -7,16 +7,14 @@
  * 2. Falls back to direct Redis connection
  * 3. Provides best performance for high-traffic sites
  *
- * CRITICAL FIXES in v1.0.2:
- * - Uses unique prefix per website (prevents data collisions)
- * - SCAN instead of KEYS for flush (non-blocking, production-safe)
- * - Improved error handling and logging
- * - Better connection pooling
+ * CRITICAL FIXES:
+ * v1.0.2 - SCAN instead of KEYS for flush (non-blocking)
+ * v1.0.3 - Manual serialization for increment/decrement support
  *
  * @package    SAW_LMS
  * @subpackage SAW_LMS/includes/cache/drivers
  * @since      1.0.0
- * @version    1.0.2 - Fixed SCAN for production safety
+ * @version    1.0.3 - Fixed increment/decrement with manual serialization
  */
 
 // If this file is called directly, abort.
@@ -161,14 +159,17 @@ class SAW_LMS_Redis_Driver implements SAW_LMS_Cache_Driver {
 				}
 			}
 
-			// Set serialization mode
-			$this->redis->setOption( Redis::OPT_SERIALIZER, Redis::SERIALIZER_PHP );
+			// IMPORTANT: NO automatic serialization!
+			// We handle serialization manually to support increment/decrement
+			// Redis INCR/DECR commands require plain integer strings, not serialized objects
+			$this->redis->setOption( Redis::OPT_SERIALIZER, Redis::SERIALIZER_NONE );
 
 			SAW_LMS_Logger::init()->debug( 'Redis driver: Direct connection established', array(
 				'host'     => $host,
 				'port'     => $port,
 				'database' => $database,
 				'prefix'   => $this->prefix,
+				'serializer' => 'none (manual)',
 			) );
 
 		} catch ( Exception $e ) {
@@ -230,8 +231,12 @@ class SAW_LMS_Redis_Driver implements SAW_LMS_Cache_Driver {
 			if ( $this->redis ) {
 				$value = $this->redis->get( $prefixed_key );
 				
-				// Redis extension with PHP serializer handles unserialization
-				return $value;
+				if ( false === $value ) {
+					return false;
+				}
+
+				// Manual deserialization (because we use SERIALIZER_NONE)
+				return maybe_unserialize( $value );
 			}
 
 		} catch ( Exception $e ) {
@@ -256,12 +261,15 @@ class SAW_LMS_Redis_Driver implements SAW_LMS_Cache_Driver {
 			}
 
 			if ( $this->redis ) {
-				// Redis extension with PHP serializer handles serialization
+				// Manual serialization (because we use SERIALIZER_NONE)
+				// This allows increment/decrement to work with plain integers
+				$serialized = maybe_serialize( $value );
+				
 				if ( $ttl > 0 ) {
-					return $this->redis->setex( $prefixed_key, $ttl, $value );
+					return $this->redis->setex( $prefixed_key, $ttl, $serialized );
 				}
 				
-				return $this->redis->set( $prefixed_key, $value );
+				return $this->redis->set( $prefixed_key, $serialized );
 			}
 
 		} catch ( Exception $e ) {
@@ -430,7 +438,8 @@ class SAW_LMS_Redis_Driver implements SAW_LMS_Cache_Driver {
 
 				foreach ( $keys as $index => $key ) {
 					if ( isset( $values[ $index ] ) && false !== $values[ $index ] ) {
-						$results[ $key ] = $values[ $index ];
+						// Manual deserialization
+						$results[ $key ] = maybe_unserialize( $values[ $index ] );
 					}
 				}
 
@@ -472,11 +481,13 @@ class SAW_LMS_Redis_Driver implements SAW_LMS_Cache_Driver {
 
 				foreach ( $values as $key => $value ) {
 					$prefixed_key = $this->get_prefixed_key( $key );
+					// Manual serialization
+					$serialized = maybe_serialize( $value );
 
 					if ( $ttl > 0 ) {
-						$this->redis->setex( $prefixed_key, $ttl, $value );
+						$this->redis->setex( $prefixed_key, $ttl, $serialized );
 					} else {
-						$this->redis->set( $prefixed_key, $value );
+						$this->redis->set( $prefixed_key, $serialized );
 					}
 				}
 

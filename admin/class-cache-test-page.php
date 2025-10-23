@@ -30,12 +30,20 @@ if ( ! defined( 'WPINC' ) ) {
 class SAW_LMS_Cache_Test_Page {
 
 	/**
-	 * The single instance of the class
+	 * Plugin name
 	 *
 	 * @since  1.0.0
-	 * @var    SAW_LMS_Cache_Test_Page
+	 * @var    string
 	 */
-	private static $instance = null;
+	private $plugin_name;
+
+	/**
+	 * Plugin version
+	 *
+	 * @since  1.0.0
+	 * @var    string
+	 */
+	private $version;
 
 	/**
 	 * Statistics tracking key
@@ -46,25 +54,34 @@ class SAW_LMS_Cache_Test_Page {
 	const STATS_KEY = '_saw_lms_cache_stats';
 
 	/**
-	 * Get singleton instance
-	 *
-	 * @since  1.0.0
-	 * @return SAW_LMS_Cache_Test_Page
-	 */
-	public static function init() {
-		if ( null === self::$instance ) {
-			self::$instance = new self();
-		}
-		return self::$instance;
-	}
-
-	/**
 	 * Constructor
 	 *
 	 * @since 1.0.0
+	 * @param string $plugin_name Plugin name
+	 * @param string $version     Plugin version
 	 */
-	private function __construct() {
+	public function __construct( $plugin_name, $version ) {
+		$this->plugin_name = $plugin_name;
+		$this->version     = $version;
 		$this->init_hooks();
+	}
+
+	/**
+	 * Add cache test submenu page
+	 *
+	 * Called via admin_menu hook from class-saw-lms.php
+	 *
+	 * @since 1.0.0
+	 */
+	public function add_test_page() {
+		add_submenu_page(
+			'saw-lms',                                     // Parent slug
+			__( 'Cache Test', 'saw-lms' ),                // Page title
+			__( 'Cache Test', 'saw-lms' ),                // Menu title
+			'manage_options',                              // Capability
+			'saw-lms-cache-test',                         // Menu slug
+			array( $this, 'render_page' )                 // Callback
+		);
 	}
 
 	/**
