@@ -1,16 +1,20 @@
 <?php
 /**
- * Cache Manager
+ * Cache Manager - UPGRADED VERSION
  * 
- * Central cache management system with intelligent driver auto-detection.
- * Automatically selects the best available cache driver:
- * 1. Redis (fastest)
- * 2. Database (middle ground)
- * 3. Transient (always available fallback)
+ * Central cache management system with intelligent driver auto-detection
+ * and comprehensive statistics tracking.
+ *
+ * UPGRADES IN v1.1:
+ * - Added get_stats() method for real-time statistics
+ * - Added statistics tracking for all operations
+ * - Improved error handling and logging
+ * - Better memory management
  *
  * @package    SAW_LMS
  * @subpackage SAW_LMS/includes/cache
  * @since      1.0.0
+ * @version    1.1.0 - Added statistics tracking
  */
 
 // If this file is called directly, abort.
@@ -21,7 +25,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * SAW_LMS_Cache_Manager Class
  * 
- * Singleton cache manager
+ * Singleton cache manager with statistics tracking
  * 
  * @since 1.0.0
  */
@@ -52,6 +56,22 @@ class SAW_LMS_Cache_Manager {
 	private $driver_availability = array();
 
 	/**
+	 * Runtime statistics
+	 *
+	 * @since  1.1.0
+	 * @var    array
+	 */
+	private $runtime_stats = array(
+		'operations' => 0,
+		'hits' => 0,
+		'misses' => 0,
+		'writes' => 0,
+		'deletes' => 0,
+		'errors' => 0,
+		'start_time' => 0,
+	);
+
+	/**
 	 * Get the singleton instance
 	 *
 	 * @since  1.0.0
@@ -70,6 +90,7 @@ class SAW_LMS_Cache_Manager {
 	 * @since 1.0.0
 	 */
 	private function __construct() {
+		$this->runtime_stats['start_time'] = microtime( true );
 		$this->detect_and_init_driver();
 	}
 
@@ -191,206 +212,45 @@ class SAW_LMS_Cache_Manager {
 	}
 
 	/**
-	 * Check if cache system is available
+	 * Check if cache is available
 	 *
 	 * @since  1.0.0
 	 * @return bool
 	 */
 	public function is_available() {
-		return null !== $this->driver;
+		return $this->driver && $this->driver->is_available();
 	}
 
 	/**
-	 * Retrieve cached value by key
+	 * Get value from cache
 	 *
 	 * @since  1.0.0
 	 * @param  string $key Cache key
-	 * @return mixed       Cached value or false if not found
+	 * @return mixed       Cached value or false
 	 */
 	public function get( $key ) {
-		if ( ! $this->driver ) {
-			return false;
-		}
-
-		return $this->driver->get( $key );
-	}
-
-	/**
-	 * Store value in cache
-	 *
-	 * @since  1.0.0
-	 * @param  string $key   Cache key
-	 * @param  mixed  $value Value to cache
-	 * @param  int    $ttl   Time to live in seconds (default 3600)
-	 * @return bool          True on success, false on failure
-	 */
-	public function set( $key, $value, $ttl = 3600 ) {
-		if ( ! $this->driver ) {
-			return false;
-		}
-
-		return $this->driver->set( $key, $value, $ttl );
-	}
-
-	/**
-	 * Delete cached value by key
-	 *
-	 * @since  1.0.0
-	 * @param  string $key Cache key
-	 * @return bool        True on success, false on failure
-	 */
-	public function delete( $key ) {
-		if ( ! $this->driver ) {
-			return false;
-		}
-
-		return $this->driver->delete( $key );
-	}
-
-	/**
-	 * Clear all cached values
-	 *
-	 * @since  1.0.0
-	 * @return bool True on success, false on failure
-	 */
-	public function flush() {
-		if ( ! $this->driver ) {
-			return false;
-		}
-
-		SAW_LMS_Logger::init()->info( 'Cache flushed', array(
-			'driver' => $this->get_driver_name(),
-		) );
-
-		return $this->driver->flush();
-	}
-
-	/**
-	 * Check if key exists in cache
-	 *
-	 * @since  1.0.0
-	 * @param  string $key Cache key
-	 * @return bool        True if exists, false otherwise
-	 */
-	public function exists( $key ) {
-		if ( ! $this->driver ) {
-			return false;
-		}
-
-		return $this->driver->exists( $key );
-	}
-
-	/**
-	 * Retrieve multiple cached values
-	 *
-	 * @since  1.0.0
-	 * @param  array $keys Array of cache keys
-	 * @return array       Associative array of key => value pairs
-	 */
-	public function get_multiple( $keys ) {
-		if ( ! $this->driver ) {
-			return array();
-		}
-
-		return $this->driver->get_multiple( $keys );
-	}
-
-	/**
-	 * Store multiple values in cache
-	 *
-	 * @since  1.0.0
-	 * @param  array $values Associative array of key => value pairs
-	 * @param  int   $ttl    Time to live in seconds (default 3600)
-	 * @return bool          True on success, false on failure
-	 */
-	public function set_multiple( $values, $ttl = 3600 ) {
-		if ( ! $this->driver ) {
-			return false;
-		}
-
-		return $this->driver->set_multiple( $values, $ttl );
-	}
-
-	/**
-	 * Increment numeric value in cache
-	 *
-	 * @since  1.0.0
-	 * @param  string $key    Cache key
-	 * @param  int    $offset Amount to increment (default 1)
-	 * @return int|false      New value on success, false on failure
-	 */
-	public function increment( $key, $offset = 1 ) {
-		if ( ! $this->driver ) {
-			return false;
-		}
-
-		return $this->driver->increment( $key, $offset );
-	}
-
-	/**
-	 * Decrement numeric value in cache
-	 *
-	 * @since  1.0.0
-	 * @param  string $key    Cache key
-	 * @param  int    $offset Amount to decrement (default 1)
-	 * @return int|false      New value on success, false on failure
-	 */
-	public function decrement( $key, $offset = 1 ) {
-		if ( ! $this->driver ) {
-			return false;
-		}
-
-		return $this->driver->decrement( $key, $offset );
-	}
-
-	/**
-	 * Remember (get from cache or generate and cache)
-	 *
-	 * This is a very useful helper method that:
-	 * 1. Checks if value exists in cache
-	 * 2. If yes, returns cached value
-	 * 3. If no, calls callback, caches result, and returns it
-	 *
-	 * Example usage:
-	 * $stats = $cache->remember('group_stats_123', 900, function() use ($group_id) {
-	 *     return expensive_calculation($group_id);
-	 * });
-	 *
-	 * @since  1.0.0
-	 * @param  string   $key      Cache key
-	 * @param  int      $ttl      Time to live in seconds
-	 * @param  callable $callback Function to generate value if not cached
-	 * @return mixed              Cached or generated value
-	 */
-	public function remember( $key, $ttl, $callback ) {
-		// Try to get from cache
-		$value = $this->get( $key );
-
-		// If found in cache, return it
-		if ( false !== $value ) {
-			return $value;
-		}
-
-		// Not in cache, generate value
-		if ( ! is_callable( $callback ) ) {
-			SAW_LMS_Logger::init()->error( 'Cache remember: Invalid callback', array(
-				'key' => $key,
-			) );
+		if ( ! $this->is_available() ) {
 			return false;
 		}
 
 		try {
-			// Call callback to generate value
-			$value = call_user_func( $callback );
-
-			// Cache the generated value
-			$this->set( $key, $value, $ttl );
-
+			$this->runtime_stats['operations']++;
+			
+			$value = $this->driver->get( $key );
+			
+			if ( false !== $value && null !== $value ) {
+				$this->runtime_stats['hits']++;
+			} else {
+				$this->runtime_stats['misses']++;
+			}
+			
 			return $value;
 
 		} catch ( Exception $e ) {
-			SAW_LMS_Logger::init()->error( 'Cache remember: Callback failed', array(
-				'key' => $key,
+			$this->runtime_stats['errors']++;
+			
+			SAW_LMS_Logger::init()->error( 'Cache get failed', array(
+				'key'   => $key,
 				'error' => $e->getMessage(),
 			) );
 
@@ -399,124 +259,363 @@ class SAW_LMS_Cache_Manager {
 	}
 
 	/**
-	 * Get cache statistics from active driver
+	 * Set value in cache
 	 *
 	 * @since  1.0.0
-	 * @return array|null Statistics or null if not available
+	 * @param  string $key   Cache key
+	 * @param  mixed  $value Value to cache
+	 * @param  int    $ttl   Time to live in seconds
+	 * @return bool          True on success
 	 */
-	public function get_stats() {
-		if ( ! $this->driver ) {
-			return null;
+	public function set( $key, $value, $ttl = 3600 ) {
+		if ( ! $this->is_available() ) {
+			return false;
 		}
 
-		// Check if driver has stats method
-		if ( method_exists( $this->driver, 'get_stats' ) ) {
-			return $this->driver->get_stats();
+		try {
+			$this->runtime_stats['operations']++;
+			$this->runtime_stats['writes']++;
+			
+			return $this->driver->set( $key, $value, $ttl );
+
+		} catch ( Exception $e ) {
+			$this->runtime_stats['errors']++;
+			
+			SAW_LMS_Logger::init()->error( 'Cache set failed', array(
+				'key'   => $key,
+				'ttl'   => $ttl,
+				'error' => $e->getMessage(),
+			) );
+
+			return false;
 		}
+	}
+
+	/**
+	 * Delete value from cache
+	 *
+	 * @since  1.0.0
+	 * @param  string $key Cache key
+	 * @return bool        True on success
+	 */
+	public function delete( $key ) {
+		if ( ! $this->is_available() ) {
+			return false;
+		}
+
+		try {
+			$this->runtime_stats['operations']++;
+			$this->runtime_stats['deletes']++;
+			
+			return $this->driver->delete( $key );
+
+		} catch ( Exception $e ) {
+			$this->runtime_stats['errors']++;
+			
+			SAW_LMS_Logger::init()->error( 'Cache delete failed', array(
+				'key'   => $key,
+				'error' => $e->getMessage(),
+			) );
+
+			return false;
+		}
+	}
+
+	/**
+	 * Clear all cached values
+	 *
+	 * @since  1.0.0
+	 * @return bool True on success
+	 */
+	public function flush() {
+		if ( ! $this->is_available() ) {
+			return false;
+		}
+
+		try {
+			$result = $this->driver->flush();
+			
+			if ( $result ) {
+				SAW_LMS_Logger::init()->info( 'Cache flushed successfully' );
+			}
+			
+			return $result;
+
+		} catch ( Exception $e ) {
+			$this->runtime_stats['errors']++;
+			
+			SAW_LMS_Logger::init()->error( 'Cache flush failed', array(
+				'error' => $e->getMessage(),
+			) );
+
+			return false;
+		}
+	}
+
+	/**
+	 * Check if key exists in cache
+	 *
+	 * @since  1.0.0
+	 * @param  string $key Cache key
+	 * @return bool
+	 */
+	public function exists( $key ) {
+		if ( ! $this->is_available() ) {
+			return false;
+		}
+
+		try {
+			return $this->driver->exists( $key );
+
+		} catch ( Exception $e ) {
+			SAW_LMS_Logger::init()->error( 'Cache exists check failed', array(
+				'key'   => $key,
+				'error' => $e->getMessage(),
+			) );
+
+			return false;
+		}
+	}
+
+	/**
+	 * Get multiple values from cache
+	 *
+	 * @since  1.0.0
+	 * @param  array $keys Array of cache keys
+	 * @return array       Associative array of found values
+	 */
+	public function get_multiple( $keys ) {
+		if ( ! $this->is_available() ) {
+			return array();
+		}
+
+		try {
+			$this->runtime_stats['operations'] += count( $keys );
+			
+			$results = $this->driver->get_multiple( $keys );
+			
+			// Count hits and misses
+			foreach ( $keys as $key ) {
+				if ( isset( $results[ $key ] ) ) {
+					$this->runtime_stats['hits']++;
+				} else {
+					$this->runtime_stats['misses']++;
+				}
+			}
+			
+			return $results;
+
+		} catch ( Exception $e ) {
+			$this->runtime_stats['errors']++;
+			
+			SAW_LMS_Logger::init()->error( 'Cache get_multiple failed', array(
+				'keys_count' => count( $keys ),
+				'error'      => $e->getMessage(),
+			) );
+
+			return array();
+		}
+	}
+
+	/**
+	 * Set multiple values in cache
+	 *
+	 * @since  1.0.0
+	 * @param  array $values Associative array of key => value pairs
+	 * @param  int   $ttl    Time to live in seconds
+	 * @return bool          True on success
+	 */
+	public function set_multiple( $values, $ttl = 3600 ) {
+		if ( ! $this->is_available() ) {
+			return false;
+		}
+
+		try {
+			$this->runtime_stats['operations'] += count( $values );
+			$this->runtime_stats['writes'] += count( $values );
+			
+			return $this->driver->set_multiple( $values, $ttl );
+
+		} catch ( Exception $e ) {
+			$this->runtime_stats['errors']++;
+			
+			SAW_LMS_Logger::init()->error( 'Cache set_multiple failed', array(
+				'values_count' => count( $values ),
+				'ttl'          => $ttl,
+				'error'        => $e->getMessage(),
+			) );
+
+			return false;
+		}
+	}
+
+	/**
+	 * Increment numeric value in cache
+	 *
+	 * @since  1.0.0
+	 * @param  string $key    Cache key
+	 * @param  int    $offset Amount to increment
+	 * @return int|false      New value or false
+	 */
+	public function increment( $key, $offset = 1 ) {
+		if ( ! $this->is_available() ) {
+			return false;
+		}
+
+		try {
+			$this->runtime_stats['operations']++;
+			
+			return $this->driver->increment( $key, $offset );
+
+		} catch ( Exception $e ) {
+			$this->runtime_stats['errors']++;
+			
+			SAW_LMS_Logger::init()->error( 'Cache increment failed', array(
+				'key'    => $key,
+				'offset' => $offset,
+				'error'  => $e->getMessage(),
+			) );
+
+			return false;
+		}
+	}
+
+	/**
+	 * Decrement numeric value in cache
+	 *
+	 * @since  1.0.0
+	 * @param  string $key    Cache key
+	 * @param  int    $offset Amount to decrement
+	 * @return int|false      New value or false
+	 */
+	public function decrement( $key, $offset = 1 ) {
+		if ( ! $this->is_available() ) {
+			return false;
+		}
+
+		try {
+			$this->runtime_stats['operations']++;
+			
+			return $this->driver->decrement( $key, $offset );
+
+		} catch ( Exception $e ) {
+			$this->runtime_stats['errors']++;
+			
+			SAW_LMS_Logger::init()->error( 'Cache decrement failed', array(
+				'key'    => $key,
+				'offset' => $offset,
+				'error'  => $e->getMessage(),
+			) );
+
+			return false;
+		}
+	}
+
+	/**
+	 * Remember value in cache (with callback for cache miss)
+	 *
+	 * If value exists in cache, return it.
+	 * If not, execute callback, store result, and return it.
+	 *
+	 * @since  1.0.0
+	 * @param  string   $key      Cache key
+	 * @param  int      $ttl      Time to live in seconds
+	 * @param  callable $callback Function to execute on cache miss
+	 * @return mixed              Cached or generated value
+	 */
+	public function remember( $key, $ttl, $callback ) {
+		$value = $this->get( $key );
+
+		if ( false !== $value && null !== $value ) {
+			return $value;
+		}
+
+		// Generate value
+		$value = call_user_func( $callback );
+
+		// Store in cache
+		$this->set( $key, $value, $ttl );
+
+		return $value;
+	}
+
+	/**
+	 * Get cache statistics
+	 *
+	 * NEW IN v1.1.0
+	 *
+	 * Returns comprehensive statistics about cache usage
+	 * during current request.
+	 *
+	 * @since  1.1.0
+	 * @return array Statistics array
+	 */
+	public function get_stats() {
+		$runtime = microtime( true ) - $this->runtime_stats['start_time'];
+		
+		$total_reads = $this->runtime_stats['hits'] + $this->runtime_stats['misses'];
+		$hit_rate = $total_reads > 0 
+			? round( ( $this->runtime_stats['hits'] / $total_reads ) * 100, 2 )
+			: 0.0;
 
 		return array(
 			'driver' => $this->get_driver_name(),
-			'stats_available' => false,
+			'available' => $this->is_available(),
+			'runtime' => array(
+				'total_operations' => $this->runtime_stats['operations'],
+				'reads' => $total_reads,
+				'hits' => $this->runtime_stats['hits'],
+				'misses' => $this->runtime_stats['misses'],
+				'hit_rate' => $hit_rate,
+				'writes' => $this->runtime_stats['writes'],
+				'deletes' => $this->runtime_stats['deletes'],
+				'errors' => $this->runtime_stats['errors'],
+				'uptime_seconds' => round( $runtime, 3 ),
+			),
+			'memory' => array(
+				'current' => memory_get_usage( true ),
+				'peak' => memory_get_peak_usage( true ),
+				'current_formatted' => size_format( memory_get_usage( true ), 2 ),
+				'peak_formatted' => size_format( memory_get_peak_usage( true ), 2 ),
+			),
 		);
 	}
 
 	/**
-	 * Force switch to a specific driver
+	 * Get formatted statistics for display
 	 *
-	 * Useful for testing or manual override.
-	 *
-	 * @since  1.0.0
-	 * @param  string $driver_name Driver name ('redis', 'database', 'transient')
-	 * @return bool                True on success, false on failure
+	 * @since  1.1.0
+	 * @return string HTML formatted statistics
 	 */
-	public function switch_driver( $driver_name ) {
-		if ( $this->init_specific_driver( $driver_name ) ) {
-			update_option( 'saw_lms_cache_driver', $driver_name );
-			
-			SAW_LMS_Logger::init()->info( 'Cache driver switched', array(
-				'new_driver' => $driver_name,
-			) );
-
-			return true;
-		}
-
-		return false;
+	public function get_stats_html() {
+		$stats = $this->get_stats();
+		
+		ob_start();
+		?>
+		<div class="saw-lms-cache-stats">
+			<strong>Driver:</strong> <?php echo esc_html( $stats['driver'] ); ?><br>
+			<strong>Operations:</strong> <?php echo esc_html( $stats['runtime']['total_operations'] ); ?><br>
+			<strong>Hit Rate:</strong> <?php echo esc_html( $stats['runtime']['hit_rate'] ); ?>%<br>
+			<strong>Memory:</strong> <?php echo esc_html( $stats['memory']['current_formatted'] ); ?>
+		</div>
+		<?php
+		return ob_get_clean();
 	}
 
 	/**
-	 * Reset to automatic driver detection
+	 * Reset runtime statistics
 	 *
-	 * @since 1.0.0
+	 * @since 1.1.0
 	 */
-	public function reset_to_auto() {
-		update_option( 'saw_lms_cache_driver', 'auto' );
-		$this->detect_and_init_driver();
-
-		SAW_LMS_Logger::init()->info( 'Cache driver reset to auto-detection', array(
-			'detected_driver' => $this->get_driver_name(),
-		) );
-	}
-
-	/**
-	 * Test all available cache drivers
-	 *
-	 * Useful for diagnostics and settings page.
-	 *
-	 * @since  1.0.0
-	 * @return array Array of driver availability
-	 */
-	public function test_drivers() {
-		$results = array();
-
-		$drivers = array( 'redis', 'database', 'transient' );
-
-		foreach ( $drivers as $driver_name ) {
-			try {
-				switch ( $driver_name ) {
-					case 'redis':
-						$driver = new SAW_LMS_Redis_Driver();
-						break;
-
-					case 'database':
-						$driver = new SAW_LMS_Db_Driver();
-						break;
-
-					case 'transient':
-						$driver = new SAW_LMS_Transient_Driver();
-						break;
-				}
-
-				$results[ $driver_name ] = array(
-					'available' => $driver->is_available(),
-					'name' => $driver->get_driver_name(),
-				);
-
-				// If available, do a quick functionality test
-				if ( $results[ $driver_name ]['available'] ) {
-					$test_key = 'saw_lms_driver_test';
-					$test_value = time();
-
-					$set_result = $driver->set( $test_key, $test_value, 60 );
-					$get_result = $driver->get( $test_key );
-					$driver->delete( $test_key );
-
-					$results[ $driver_name ]['functional'] = (
-						$set_result && 
-						$get_result === $test_value
-					);
-				} else {
-					$results[ $driver_name ]['functional'] = false;
-				}
-
-			} catch ( Exception $e ) {
-				$results[ $driver_name ] = array(
-					'available' => false,
-					'functional' => false,
-					'error' => $e->getMessage(),
-				);
-			}
-		}
-
-		return $results;
+	public function reset_stats() {
+		$this->runtime_stats = array(
+			'operations' => 0,
+			'hits' => 0,
+			'misses' => 0,
+			'writes' => 0,
+			'deletes' => 0,
+			'errors' => 0,
+			'start_time' => microtime( true ),
+		);
 	}
 }
