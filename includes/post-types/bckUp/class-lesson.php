@@ -753,7 +753,7 @@ class SAW_LMS_Lesson {
 		// Enqueue admin styles.
 		wp_enqueue_style(
 			'saw-lms-lesson-meta-box',
-			SAW_LMS_PLUGIN_URL . 'assets/css/admin/lesson-meta-box.css',
+			SAW_LMS_URL . 'assets/css/admin/lesson-meta-box.css',
 			array(),
 			SAW_LMS_VERSION
 		);
@@ -761,7 +761,7 @@ class SAW_LMS_Lesson {
 		// Enqueue admin scripts.
 		wp_enqueue_script(
 			'saw-lms-lesson-meta-box',
-			SAW_LMS_PLUGIN_URL . 'assets/js/admin/lesson-meta-box.js',
+			SAW_LMS_URL . 'assets/js/admin/lesson-meta-box.js',
 			array( 'jquery' ),
 			SAW_LMS_VERSION,
 			true

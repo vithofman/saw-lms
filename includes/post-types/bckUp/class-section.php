@@ -543,7 +543,7 @@ class SAW_LMS_Section {
 		// Enqueue admin styles.
 		wp_enqueue_style(
 			'saw-lms-section-meta-box',
-			SAW_LMS_PLUGIN_URL . 'assets/css/admin/section-meta-box.css',
+			SAW_LMS_URL . 'assets/css/admin/section-meta-box.css',
 			array(),
 			SAW_LMS_VERSION
 		);
@@ -551,7 +551,7 @@ class SAW_LMS_Section {
 		// Enqueue admin scripts.
 		wp_enqueue_script(
 			'saw-lms-section-meta-box',
-			SAW_LMS_PLUGIN_URL . 'assets/js/admin/section-meta-box.js',
+			SAW_LMS_URL . 'assets/js/admin/section-meta-box.js',
 			array( 'jquery', 'media-upload', 'media-views' ),
 			SAW_LMS_VERSION,
 			true

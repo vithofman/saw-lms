@@ -827,7 +827,7 @@ class SAW_LMS_Course {
 		// Enqueue admin styles (will be created in next steps).
 		wp_enqueue_style(
 			'saw-lms-course-admin',
-			SAW_LMS_PLUGIN_URL . 'assets/css/admin/course.css',
+			SAW_LMS_URL . 'assets/css/admin/course.css',
 			array(),
 			SAW_LMS_VERSION
 		);
@@ -835,7 +835,7 @@ class SAW_LMS_Course {
 		// Enqueue admin scripts (will be created in next steps).
 		wp_enqueue_script(
 			'saw-lms-course-admin',
-			SAW_LMS_PLUGIN_URL . 'assets/js/admin/course.js',
+			SAW_LMS_URL . 'assets/js/admin/course.js',
 			array( 'jquery' ),
 			SAW_LMS_VERSION,
 			true
