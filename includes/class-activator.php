@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Activator
- * 
+ *
  * Handles plugin activation - creates database tables and sets up initial configuration
  *
  * @package    SAW_LMS
@@ -16,7 +16,7 @@ if ( ! defined( 'WPINC' ) ) {
 
 /**
  * SAW_LMS_Activator Class
- * 
+ *
  * @since 1.0.0
  */
 class SAW_LMS_Activator {
@@ -28,43 +28,43 @@ class SAW_LMS_Activator {
 
 	/**
 	 * Plugin activation hook
-	 * 
+	 *
 	 * Creates all database tables and sets up initial configuration
 	 *
 	 * @since 1.0.0
 	 */
 	public static function activate() {
 		global $wpdb;
-		
+
 		// Get WordPress DB prefix
 		$prefix = $wpdb->prefix;
-		
+
 		// Charset and collation
 		$charset_collate = $wpdb->get_charset_collate();
-		
+
 		// Require upgrade file for dbDelta
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-		
+
 		// Create all tables
 		self::create_core_tables( $prefix, $charset_collate );
 		self::create_group_tables( $prefix, $charset_collate );
 		self::create_versioning_tables( $prefix, $charset_collate );
 		self::create_scheduling_tables( $prefix, $charset_collate );
 		self::create_system_tables( $prefix, $charset_collate );
-		
+
 		// Create upload directories
 		self::create_upload_directories();
-		
+
 		// Set default options
 		self::set_default_options();
-		
+
 		// Flush rewrite rules
 		flush_rewrite_rules();
-		
+
 		// OPRAVENO: Uložení DB verze
 		update_option( 'saw_lms_db_version', self::DB_VERSION );
 	}
-	
+
 	/**
 	 * Create core LMS tables
 	 *
@@ -73,7 +73,7 @@ class SAW_LMS_Activator {
 	 * @param string $charset_collate Charset and collation
 	 */
 	private static function create_core_tables( $prefix, $charset_collate ) {
-		
+
 		// 1. Enrollments table
 		$sql = "CREATE TABLE {$prefix}saw_lms_enrollments (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -96,7 +96,7 @@ class SAW_LMS_Activator {
 			KEY expires_at (expires_at)
 		) $charset_collate;";
 		dbDelta( $sql );
-		
+
 		// 2. Progress table
 		$sql = "CREATE TABLE {$prefix}saw_lms_progress (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -118,7 +118,7 @@ class SAW_LMS_Activator {
 			KEY status (status)
 		) $charset_collate;";
 		dbDelta( $sql );
-		
+
 		// 3. Quiz attempts table
 		$sql = "CREATE TABLE {$prefix}saw_lms_quiz_attempts (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -140,7 +140,7 @@ class SAW_LMS_Activator {
 			KEY passed (passed)
 		) $charset_collate;";
 		dbDelta( $sql );
-		
+
 		// 4. Certificates table
 		$sql = "CREATE TABLE {$prefix}saw_lms_certificates (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -160,7 +160,7 @@ class SAW_LMS_Activator {
 			KEY enrollment_id (enrollment_id)
 		) $charset_collate;";
 		dbDelta( $sql );
-		
+
 		// 5. Points ledger table
 		$sql = "CREATE TABLE {$prefix}saw_lms_points_ledger (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -176,7 +176,7 @@ class SAW_LMS_Activator {
 			KEY created_at (created_at)
 		) $charset_collate;";
 		dbDelta( $sql );
-		
+
 		// 6. Activity log table
 		$sql = "CREATE TABLE {$prefix}saw_lms_activity_log (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -195,7 +195,7 @@ class SAW_LMS_Activator {
 		) $charset_collate;";
 		dbDelta( $sql );
 	}
-	
+
 	/**
 	 * Create group management tables
 	 *
@@ -204,7 +204,7 @@ class SAW_LMS_Activator {
 	 * @param string $charset_collate Charset and collation
 	 */
 	private static function create_group_tables( $prefix, $charset_collate ) {
-		
+
 		// 7. Groups table
 		$sql = "CREATE TABLE {$prefix}saw_lms_groups (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -223,7 +223,7 @@ class SAW_LMS_Activator {
 			KEY order_id (order_id)
 		) $charset_collate;";
 		dbDelta( $sql );
-		
+
 		// 8. Group members table
 		$sql = "CREATE TABLE {$prefix}saw_lms_group_members (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -239,7 +239,7 @@ class SAW_LMS_Activator {
 			KEY role (role)
 		) $charset_collate;";
 		dbDelta( $sql );
-		
+
 		// 9. Custom documents table
 		$sql = "CREATE TABLE {$prefix}saw_lms_custom_documents (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -257,7 +257,7 @@ class SAW_LMS_Activator {
 		) $charset_collate;";
 		dbDelta( $sql );
 	}
-	
+
 	/**
 	 * Create versioning and compliance tables
 	 *
@@ -266,7 +266,7 @@ class SAW_LMS_Activator {
 	 * @param string $charset_collate Charset and collation
 	 */
 	private static function create_versioning_tables( $prefix, $charset_collate ) {
-		
+
 		// 10. Content versions table
 		$sql = "CREATE TABLE {$prefix}saw_lms_content_versions (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -283,7 +283,7 @@ class SAW_LMS_Activator {
 			KEY content_hash (content_hash)
 		) $charset_collate;";
 		dbDelta( $sql );
-		
+
 		// 11. Enrollment content versions table
 		$sql = "CREATE TABLE {$prefix}saw_lms_enrollment_content_versions (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -298,7 +298,7 @@ class SAW_LMS_Activator {
 			KEY version_id (version_id)
 		) $charset_collate;";
 		dbDelta( $sql );
-		
+
 		// 12. Content changelog table
 		$sql = "CREATE TABLE {$prefix}saw_lms_content_changelog (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -314,7 +314,7 @@ class SAW_LMS_Activator {
 			KEY changed_by (changed_by)
 		) $charset_collate;";
 		dbDelta( $sql );
-		
+
 		// 13. Course completion snapshots table
 		$sql = "CREATE TABLE {$prefix}saw_lms_course_completion_snapshots (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -325,7 +325,7 @@ class SAW_LMS_Activator {
 			UNIQUE KEY enrollment_id (enrollment_id)
 		) $charset_collate;";
 		dbDelta( $sql );
-		
+
 		// 14. Document snapshots table
 		$sql = "CREATE TABLE {$prefix}saw_lms_document_snapshots (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -341,7 +341,7 @@ class SAW_LMS_Activator {
 		) $charset_collate;";
 		dbDelta( $sql );
 	}
-	
+
 	/**
 	 * Create scheduling tables
 	 *
@@ -350,7 +350,7 @@ class SAW_LMS_Activator {
 	 * @param string $charset_collate Charset and collation
 	 */
 	private static function create_scheduling_tables( $prefix, $charset_collate ) {
-		
+
 		// 15. Course schedules table
 		$sql = "CREATE TABLE {$prefix}saw_lms_course_schedules (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -372,7 +372,7 @@ class SAW_LMS_Activator {
 		) $charset_collate;";
 		dbDelta( $sql );
 	}
-	
+
 	/**
 	 * Create system tables (error log, cache)
 	 *
@@ -381,7 +381,7 @@ class SAW_LMS_Activator {
 	 * @param string $charset_collate Charset and collation
 	 */
 	private static function create_system_tables( $prefix, $charset_collate ) {
-		
+
 		// 16. Error log table
 		$sql = "CREATE TABLE {$prefix}saw_lms_error_log (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -400,7 +400,7 @@ class SAW_LMS_Activator {
 			KEY created_at (created_at)
 		) $charset_collate;";
 		dbDelta( $sql );
-		
+
 		// 17. Cache table (pro DB driver)
 		$sql = "CREATE TABLE {$prefix}saw_lms_cache (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -414,7 +414,7 @@ class SAW_LMS_Activator {
 		) $charset_collate;";
 		dbDelta( $sql );
 	}
-	
+
 	/**
 	 * Create upload directories with security
 	 *
@@ -423,7 +423,7 @@ class SAW_LMS_Activator {
 	private static function create_upload_directories() {
 		$upload_dir = wp_upload_dir();
 		$base_dir   = $upload_dir['basedir'] . '/saw-lms';
-		
+
 		// Directories to create
 		$directories = array(
 			$base_dir,
@@ -433,25 +433,25 @@ class SAW_LMS_Activator {
 			$base_dir . '/temp',
 			$base_dir . '/logs',
 		);
-		
+
 		// .htaccess content to deny direct access
 		$htaccess_content = "deny from all\n";
-		
+
 		// index.php content to prevent directory listing
 		$index_content = "<?php\n// Silence is golden.\n";
-		
+
 		// Create each directory
 		foreach ( $directories as $dir ) {
 			if ( ! file_exists( $dir ) ) {
 				wp_mkdir_p( $dir );
 			}
-			
+
 			// Add .htaccess
 			$htaccess_file = $dir . '/.htaccess';
 			if ( ! file_exists( $htaccess_file ) ) {
 				file_put_contents( $htaccess_file, $htaccess_content );
 			}
-			
+
 			// Add index.php
 			$index_file = $dir . '/index.php';
 			if ( ! file_exists( $index_file ) ) {
@@ -459,7 +459,7 @@ class SAW_LMS_Activator {
 			}
 		}
 	}
-	
+
 	/**
 	 * Set default plugin options
 	 *
@@ -474,56 +474,56 @@ class SAW_LMS_Activator {
 		update_option( 'saw_lms_points_per_lesson', 10 );
 		update_option( 'saw_lms_points_per_quiz', 20 );
 		update_option( 'saw_lms_min_watch_percentage', 80 );
-		
+
 		// Také můžeme uložit kompletní settings array
 		$default_settings = array(
-			'version'           => SAW_LMS_VERSION,
-			'installed_at'      => current_time( 'mysql' ),
-			
+			'version'               => SAW_LMS_VERSION,
+			'installed_at'          => current_time( 'mysql' ),
+
 			// General settings
-			'course_slug'       => 'kurzy',
-			'lesson_slug'       => 'lekce',
-			'quiz_slug'         => 'kviz',
-			
+			'course_slug'           => 'kurzy',
+			'lesson_slug'           => 'lekce',
+			'quiz_slug'             => 'kviz',
+
 			// Video settings
-			'min_watch_percent' => 80,
-			'tracking_interval' => 10,
-			
+			'min_watch_percent'     => 80,
+			'tracking_interval'     => 10,
+
 			// Quiz settings
 			'default_passing_score' => 70,
 			'default_max_attempts'  => 3,
 			'randomize_questions'   => false,
-			
+
 			// Certificates
 			'certificates_enabled'  => true,
 			'enable_qr_code'        => true,
 			'enable_verification'   => true,
-			
+
 			// Points
 			'points_per_lesson'     => 10,
 			'points_per_quiz'       => 20,
 			'points_per_course'     => 100,
 			'bonus_perfect_score'   => 50,
 			'bonus_first_attempt'   => 25,
-			
+
 			// Groups
 			'enable_custom_docs'    => true,
 			'max_file_size'         => 10485760, // 10MB
 			'allowed_file_types'    => 'pdf,doc,docx,xls,xlsx,png,jpg,jpeg',
-			
+
 			// Notifications
 			'email_from_name'       => get_bloginfo( 'name' ),
 			'email_from_address'    => get_bloginfo( 'admin_email' ),
-			
+
 			// Compliance
 			'enable_versioning'     => true,
 			'retention_years'       => 7,
-			
+
 			// Advanced
 			'debug_mode'            => false,
 			'cache_driver'          => 'auto', // auto, redis, database, transient
 		);
-		
+
 		add_option( 'saw_lms_settings', $default_settings );
 	}
 }

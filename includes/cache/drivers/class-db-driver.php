@@ -1,7 +1,7 @@
 <?php
 /**
  * Database Cache Driver
- * 
+ *
  * Implements caching using WordPress database (wp_saw_lms_cache table).
  * Features:
  * - Lazy cleanup: Expired records deleted on get()
@@ -20,7 +20,7 @@ if ( ! defined( 'WPINC' ) ) {
 
 /**
  * SAW_LMS_Db_Driver Class
- * 
+ *
  * @since 1.0.0
  */
 class SAW_LMS_Db_Driver implements SAW_LMS_Cache_Driver {
@@ -56,8 +56,8 @@ class SAW_LMS_Db_Driver implements SAW_LMS_Cache_Driver {
 	 */
 	public function __construct() {
 		global $wpdb;
-		
-		$this->wpdb = $wpdb;
+
+		$this->wpdb       = $wpdb;
 		$this->table_name = $wpdb->prefix . 'saw_lms_cache';
 
 		// Schedule cleanup cron if not already scheduled
@@ -100,7 +100,7 @@ class SAW_LMS_Db_Driver implements SAW_LMS_Cache_Driver {
 
 			// Check if expired (lazy cleanup)
 			$expires_at = strtotime( $row->expires_at );
-			
+
 			if ( $expires_at < time() ) {
 				// Delete expired entry
 				$this->delete( $key );
@@ -111,10 +111,13 @@ class SAW_LMS_Db_Driver implements SAW_LMS_Cache_Driver {
 			return maybe_unserialize( $row->cache_value );
 
 		} catch ( Exception $e ) {
-			SAW_LMS_Logger::init()->error( 'Database cache get failed', array(
-				'key' => $key,
-				'error' => $e->getMessage(),
-			) );
+			SAW_LMS_Logger::init()->error(
+				'Database cache get failed',
+				array(
+					'key'   => $key,
+					'error' => $e->getMessage(),
+				)
+			);
 		}
 
 		return false;
@@ -144,7 +147,7 @@ class SAW_LMS_Db_Driver implements SAW_LMS_Cache_Driver {
 					$this->table_name,
 					array(
 						'cache_value' => $serialized,
-						'expires_at' => $expires_at,
+						'expires_at'  => $expires_at,
 					),
 					array( 'cache_key' => $prefixed_key ),
 					array( '%s', '%s' ),
@@ -158,10 +161,10 @@ class SAW_LMS_Db_Driver implements SAW_LMS_Cache_Driver {
 			$result = $this->wpdb->insert(
 				$this->table_name,
 				array(
-					'cache_key' => $prefixed_key,
+					'cache_key'   => $prefixed_key,
 					'cache_value' => $serialized,
-					'expires_at' => $expires_at,
-					'created_at' => current_time( 'mysql' ),
+					'expires_at'  => $expires_at,
+					'created_at'  => current_time( 'mysql' ),
 				),
 				array( '%s', '%s', '%s', '%s' )
 			);
@@ -169,11 +172,14 @@ class SAW_LMS_Db_Driver implements SAW_LMS_Cache_Driver {
 			return false !== $result;
 
 		} catch ( Exception $e ) {
-			SAW_LMS_Logger::init()->error( 'Database cache set failed', array(
-				'key' => $key,
-				'ttl' => $ttl,
-				'error' => $e->getMessage(),
-			) );
+			SAW_LMS_Logger::init()->error(
+				'Database cache set failed',
+				array(
+					'key'   => $key,
+					'ttl'   => $ttl,
+					'error' => $e->getMessage(),
+				)
+			);
 		}
 
 		return false;
@@ -195,10 +201,13 @@ class SAW_LMS_Db_Driver implements SAW_LMS_Cache_Driver {
 			return false !== $result;
 
 		} catch ( Exception $e ) {
-			SAW_LMS_Logger::init()->error( 'Database cache delete failed', array(
-				'key' => $key,
-				'error' => $e->getMessage(),
-			) );
+			SAW_LMS_Logger::init()->error(
+				'Database cache delete failed',
+				array(
+					'key'   => $key,
+					'error' => $e->getMessage(),
+				)
+			);
 		}
 
 		return false;
@@ -220,9 +229,12 @@ class SAW_LMS_Db_Driver implements SAW_LMS_Cache_Driver {
 			return false !== $result;
 
 		} catch ( Exception $e ) {
-			SAW_LMS_Logger::init()->error( 'Database cache flush failed', array(
-				'error' => $e->getMessage(),
-			) );
+			SAW_LMS_Logger::init()->error(
+				'Database cache flush failed',
+				array(
+					'error' => $e->getMessage(),
+				)
+			);
 		}
 
 		return false;
@@ -248,10 +260,13 @@ class SAW_LMS_Db_Driver implements SAW_LMS_Cache_Driver {
 			return $count > 0;
 
 		} catch ( Exception $e ) {
-			SAW_LMS_Logger::init()->error( 'Database cache exists check failed', array(
-				'key' => $key,
-				'error' => $e->getMessage(),
-			) );
+			SAW_LMS_Logger::init()->error(
+				'Database cache exists check failed',
+				array(
+					'key'   => $key,
+					'error' => $e->getMessage(),
+				)
+			);
 		}
 
 		return false;
@@ -265,7 +280,7 @@ class SAW_LMS_Db_Driver implements SAW_LMS_Cache_Driver {
 
 		try {
 			$prefixed_keys = array_map( array( $this, 'get_prefixed_key' ), $keys );
-			
+
 			// Prepare placeholders
 			$placeholders = implode( ', ', array_fill( 0, count( $prefixed_keys ), '%s' ) );
 
@@ -292,17 +307,20 @@ class SAW_LMS_Db_Driver implements SAW_LMS_Cache_Driver {
 				}
 
 				// Remove prefix from key for return array
-				$original_key = str_replace( $this->prefix, '', $row->cache_key );
+				$original_key             = str_replace( $this->prefix, '', $row->cache_key );
 				$results[ $original_key ] = maybe_unserialize( $row->cache_value );
 			}
 
 			return $results;
 
 		} catch ( Exception $e ) {
-			SAW_LMS_Logger::init()->error( 'Database cache get_multiple failed', array(
-				'keys_count' => count( $keys ),
-				'error' => $e->getMessage(),
-			) );
+			SAW_LMS_Logger::init()->error(
+				'Database cache get_multiple failed',
+				array(
+					'keys_count' => count( $keys ),
+					'error'      => $e->getMessage(),
+				)
+			);
 		}
 
 		return $results;
@@ -314,7 +332,7 @@ class SAW_LMS_Db_Driver implements SAW_LMS_Cache_Driver {
 	public function set_multiple( $values, $ttl = 3600 ) {
 		try {
 			$expires_at = date( 'Y-m-d H:i:s', time() + $ttl );
-			$success = true;
+			$success    = true;
 
 			foreach ( $values as $key => $value ) {
 				if ( ! $this->set( $key, $value, $ttl ) ) {
@@ -325,10 +343,13 @@ class SAW_LMS_Db_Driver implements SAW_LMS_Cache_Driver {
 			return $success;
 
 		} catch ( Exception $e ) {
-			SAW_LMS_Logger::init()->error( 'Database cache set_multiple failed', array(
-				'values_count' => count( $values ),
-				'error' => $e->getMessage(),
-			) );
+			SAW_LMS_Logger::init()->error(
+				'Database cache set_multiple failed',
+				array(
+					'values_count' => count( $values ),
+					'error'        => $e->getMessage(),
+				)
+			);
 		}
 
 		return false;
@@ -352,13 +373,15 @@ class SAW_LMS_Db_Driver implements SAW_LMS_Cache_Driver {
 			if ( $this->set( $key, $new_value ) ) {
 				return $new_value;
 			}
-
 		} catch ( Exception $e ) {
-			SAW_LMS_Logger::init()->error( 'Database cache increment failed', array(
-				'key' => $key,
-				'offset' => $offset,
-				'error' => $e->getMessage(),
-			) );
+			SAW_LMS_Logger::init()->error(
+				'Database cache increment failed',
+				array(
+					'key'    => $key,
+					'offset' => $offset,
+					'error'  => $e->getMessage(),
+				)
+			);
 		}
 
 		return false;
@@ -382,13 +405,15 @@ class SAW_LMS_Db_Driver implements SAW_LMS_Cache_Driver {
 			if ( $this->set( $key, $new_value ) ) {
 				return $new_value;
 			}
-
 		} catch ( Exception $e ) {
-			SAW_LMS_Logger::init()->error( 'Database cache decrement failed', array(
-				'key' => $key,
-				'offset' => $offset,
-				'error' => $e->getMessage(),
-			) );
+			SAW_LMS_Logger::init()->error(
+				'Database cache decrement failed',
+				array(
+					'key'    => $key,
+					'offset' => $offset,
+					'error'  => $e->getMessage(),
+				)
+			);
 		}
 
 		return false;
@@ -410,17 +435,23 @@ class SAW_LMS_Db_Driver implements SAW_LMS_Cache_Driver {
 			);
 
 			if ( $deleted > 0 ) {
-				SAW_LMS_Logger::init()->info( 'Database cache cleanup completed', array(
-					'deleted_count' => $deleted,
-				) );
+				SAW_LMS_Logger::init()->info(
+					'Database cache cleanup completed',
+					array(
+						'deleted_count' => $deleted,
+					)
+				);
 			}
 
 			return $deleted;
 
 		} catch ( Exception $e ) {
-			SAW_LMS_Logger::init()->error( 'Database cache cleanup failed', array(
-				'error' => $e->getMessage(),
-			) );
+			SAW_LMS_Logger::init()->error(
+				'Database cache cleanup failed',
+				array(
+					'error' => $e->getMessage(),
+				)
+			);
 		}
 
 		return 0;
@@ -440,9 +471,9 @@ class SAW_LMS_Db_Driver implements SAW_LMS_Cache_Driver {
 	 */
 	public function get_stats() {
 		$stats = array(
-			'total' => 0,
-			'active' => 0,
-			'expired' => 0,
+			'total'      => 0,
+			'active'     => 0,
+			'expired'    => 0,
 			'size_bytes' => 0,
 		);
 
@@ -473,9 +504,12 @@ class SAW_LMS_Db_Driver implements SAW_LMS_Cache_Driver {
 			);
 
 		} catch ( Exception $e ) {
-			SAW_LMS_Logger::init()->error( 'Database cache stats failed', array(
-				'error' => $e->getMessage(),
-			) );
+			SAW_LMS_Logger::init()->error(
+				'Database cache stats failed',
+				array(
+					'error' => $e->getMessage(),
+				)
+			);
 		}
 
 		return $stats;
@@ -495,15 +529,18 @@ class SAW_LMS_Db_Driver implements SAW_LMS_Cache_Driver {
 		// Check if table exists
 		$table_exists = $this->wpdb->get_var(
 			$this->wpdb->prepare(
-				"SHOW TABLES LIKE %s",
+				'SHOW TABLES LIKE %s',
 				$this->table_name
 			)
 		);
 
 		if ( $table_exists !== $this->table_name ) {
-			SAW_LMS_Logger::init()->warning( 'Database cache table does not exist', array(
-				'table' => $this->table_name,
-			) );
+			SAW_LMS_Logger::init()->warning(
+				'Database cache table does not exist',
+				array(
+					'table' => $this->table_name,
+				)
+			);
 			return false;
 		}
 

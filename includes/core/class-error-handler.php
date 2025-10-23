@@ -1,7 +1,7 @@
 <?php
 /**
  * Error Handler
- * 
+ *
  * Centralized error handling system that catches PHP errors, exceptions, and fatal errors.
  * Logs them to database and files, sends email notifications for critical errors.
  *
@@ -17,9 +17,9 @@ if ( ! defined( 'WPINC' ) ) {
 
 /**
  * SAW_LMS_Error_Handler Class
- * 
+ *
  * Singleton class for handling errors
- * 
+ *
  * @since 1.0.0
  */
 class SAW_LMS_Error_Handler {
@@ -148,9 +148,9 @@ class SAW_LMS_Error_Handler {
 
 		// Create context
 		$context = array(
-			'errno'   => $errno,
-			'file'    => $errfile,
-			'line'    => $errline,
+			'errno' => $errno,
+			'file'  => $errfile,
+			'line'  => $errline,
 		);
 
 		// Log the error
@@ -198,7 +198,7 @@ class SAW_LMS_Error_Handler {
 
 		// Check if it's a fatal error
 		$fatal_errors = array( E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR );
-		
+
 		if ( ! in_array( $error['type'], $fatal_errors, true ) ) {
 			return;
 		}
@@ -247,19 +247,19 @@ class SAW_LMS_Error_Handler {
 
 		// Insert into database
 		$table_name = $wpdb->prefix . 'saw_lms_error_log';
-		
+
 		$wpdb->insert(
 			$table_name,
 			array(
-				'error_type'  => $type,
-				'message'     => $message,
-				'context'     => $context_json,
-				'file'        => $file,
-				'line'        => $line,
-				'user_id'     => $user_id ? $user_id : null,
-				'ip_address'  => $ip_address,
-				'url'         => $url,
-				'created_at'  => current_time( 'mysql' ),
+				'error_type' => $type,
+				'message'    => $message,
+				'context'    => $context_json,
+				'file'       => $file,
+				'line'       => $line,
+				'user_id'    => $user_id ? $user_id : null,
+				'ip_address' => $ip_address,
+				'url'        => $url,
+				'created_at' => current_time( 'mysql' ),
 			),
 			array( '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%s' )
 		);
@@ -297,7 +297,7 @@ class SAW_LMS_Error_Handler {
 
 		// Get admin email
 		$admin_email = get_option( 'admin_email' );
-		
+
 		if ( empty( $admin_email ) ) {
 			return;
 		}
@@ -322,15 +322,15 @@ class SAW_LMS_Error_Handler {
 		// Add context details
 		if ( ! empty( $context ) ) {
 			$body .= "Details:\n";
-			
+
 			if ( isset( $context['file'] ) ) {
 				$body .= "File: {$context['file']}\n";
 			}
-			
+
 			if ( isset( $context['line'] ) ) {
 				$body .= "Line: {$context['line']}\n";
 			}
-			
+
 			if ( isset( $context['trace'] ) ) {
 				$body .= "\nStack Trace:\n{$context['trace']}\n";
 			}
@@ -338,7 +338,7 @@ class SAW_LMS_Error_Handler {
 
 		$body .= "\n--\n";
 		$body .= "This is an automated message from SAW LMS Plugin.\n";
-		$body .= "Site: " . get_bloginfo( 'url' );
+		$body .= 'Site: ' . get_bloginfo( 'url' );
 
 		// Send email
 		wp_mail( $admin_email, $subject, $body );
@@ -394,7 +394,7 @@ class SAW_LMS_Error_Handler {
 	 */
 	public function get_error_stats( $days = 7 ) {
 		global $wpdb;
-		
+
 		$table_name = $wpdb->prefix . 'saw_lms_error_log';
 		$date_from  = date( 'Y-m-d H:i:s', strtotime( "-{$days} days" ) );
 
@@ -418,13 +418,13 @@ class SAW_LMS_Error_Handler {
 	 * Get recent errors
 	 *
 	 * @since  1.0.0
-	 * @param  int $limit Number of errors to retrieve
+	 * @param  int    $limit Number of errors to retrieve
 	 * @param  string $type Filter by error type (optional)
 	 * @return array
 	 */
 	public function get_recent_errors( $limit = 50, $type = null ) {
 		global $wpdb;
-		
+
 		$table_name = $wpdb->prefix . 'saw_lms_error_log';
 
 		if ( $type ) {
@@ -463,7 +463,7 @@ class SAW_LMS_Error_Handler {
 	 */
 	public function clear_old_logs( $days = 30 ) {
 		global $wpdb;
-		
+
 		$table_name = $wpdb->prefix . 'saw_lms_error_log';
 		$date_limit = date( 'Y-m-d H:i:s', strtotime( "-{$days} days" ) );
 

@@ -1,0 +1,14 @@
+parameters:
+	level: 5
+	paths:
+		- includes/
+	excludePaths:
+		- includes/vendor/
+		- tests/
+	ignoreErrors:
+		- '#^Function wp_[a-z_]+ not found\.$#'
+		- '#^Function get_[a-z_]+ not found\.$#'
+		- '#^Function is_[a-z_]+ not found\.$#'
+		- '#^Function current_user_can not found\.$#'
+		- '#^Constant WPINC not found\.$#'
+	reportUnmatchedIgnoredErrors: false

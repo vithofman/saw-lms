@@ -1,7 +1,7 @@
 <?php
 /**
  * Transient Cache Driver
- * 
+ *
  * Implements caching using WordPress Transients API.
  * This is the fallback driver - always available on any WordPress installation.
  * Transients are stored in wp_options table (or object cache if available).
@@ -18,7 +18,7 @@ if ( ! defined( 'WPINC' ) ) {
 
 /**
  * SAW_LMS_Transient_Driver Class
- * 
+ *
  * @since 1.0.0
  */
 class SAW_LMS_Transient_Driver implements SAW_LMS_Cache_Driver {
@@ -51,7 +51,7 @@ class SAW_LMS_Transient_Driver implements SAW_LMS_Cache_Driver {
 		// WordPress transient keys are max 172 characters
 		// Our prefix is 8 chars, leaving 164 for actual key
 		$prefixed = $this->prefix . $key;
-		
+
 		if ( strlen( $prefixed ) > 172 ) {
 			// Hash long keys
 			$prefixed = $this->prefix . md5( $key );
@@ -77,10 +77,13 @@ class SAW_LMS_Transient_Driver implements SAW_LMS_Cache_Driver {
 			return $value;
 
 		} catch ( Exception $e ) {
-			SAW_LMS_Logger::init()->error( 'Transient cache get failed', array(
-				'key' => $key,
-				'error' => $e->getMessage(),
-			) );
+			SAW_LMS_Logger::init()->error(
+				'Transient cache get failed',
+				array(
+					'key'   => $key,
+					'error' => $e->getMessage(),
+				)
+			);
 		}
 
 		return false;
@@ -100,11 +103,14 @@ class SAW_LMS_Transient_Driver implements SAW_LMS_Cache_Driver {
 			return set_transient( $prefixed_key, $value, $ttl );
 
 		} catch ( Exception $e ) {
-			SAW_LMS_Logger::init()->error( 'Transient cache set failed', array(
-				'key' => $key,
-				'ttl' => $ttl,
-				'error' => $e->getMessage(),
-			) );
+			SAW_LMS_Logger::init()->error(
+				'Transient cache set failed',
+				array(
+					'key'   => $key,
+					'ttl'   => $ttl,
+					'error' => $e->getMessage(),
+				)
+			);
 		}
 
 		return false;
@@ -120,10 +126,13 @@ class SAW_LMS_Transient_Driver implements SAW_LMS_Cache_Driver {
 			return delete_transient( $prefixed_key );
 
 		} catch ( Exception $e ) {
-			SAW_LMS_Logger::init()->error( 'Transient cache delete failed', array(
-				'key' => $key,
-				'error' => $e->getMessage(),
-			) );
+			SAW_LMS_Logger::init()->error(
+				'Transient cache delete failed',
+				array(
+					'key'   => $key,
+					'error' => $e->getMessage(),
+				)
+			);
 		}
 
 		return false;
@@ -148,16 +157,22 @@ class SAW_LMS_Transient_Driver implements SAW_LMS_Cache_Driver {
 				)
 			);
 
-			SAW_LMS_Logger::init()->debug( 'Transient cache flushed', array(
-				'deleted_options' => $deleted,
-			) );
+			SAW_LMS_Logger::init()->debug(
+				'Transient cache flushed',
+				array(
+					'deleted_options' => $deleted,
+				)
+			);
 
 			return true;
 
 		} catch ( Exception $e ) {
-			SAW_LMS_Logger::init()->error( 'Transient cache flush failed', array(
-				'error' => $e->getMessage(),
-			) );
+			SAW_LMS_Logger::init()->error(
+				'Transient cache flush failed',
+				array(
+					'error' => $e->getMessage(),
+				)
+			);
 		}
 
 		return false;
@@ -172,14 +187,17 @@ class SAW_LMS_Transient_Driver implements SAW_LMS_Cache_Driver {
 		try {
 			// get_transient returns false if not exists or expired
 			$value = get_transient( $prefixed_key );
-			
+
 			return false !== $value;
 
 		} catch ( Exception $e ) {
-			SAW_LMS_Logger::init()->error( 'Transient cache exists check failed', array(
-				'key' => $key,
-				'error' => $e->getMessage(),
-			) );
+			SAW_LMS_Logger::init()->error(
+				'Transient cache exists check failed',
+				array(
+					'key'   => $key,
+					'error' => $e->getMessage(),
+				)
+			);
 		}
 
 		return false;
@@ -195,7 +213,7 @@ class SAW_LMS_Transient_Driver implements SAW_LMS_Cache_Driver {
 			// Transients API doesn't have batch get, so we loop
 			foreach ( $keys as $key ) {
 				$value = $this->get( $key );
-				
+
 				if ( false !== $value ) {
 					$results[ $key ] = $value;
 				}
@@ -204,10 +222,13 @@ class SAW_LMS_Transient_Driver implements SAW_LMS_Cache_Driver {
 			return $results;
 
 		} catch ( Exception $e ) {
-			SAW_LMS_Logger::init()->error( 'Transient cache get_multiple failed', array(
-				'keys_count' => count( $keys ),
-				'error' => $e->getMessage(),
-			) );
+			SAW_LMS_Logger::init()->error(
+				'Transient cache get_multiple failed',
+				array(
+					'keys_count' => count( $keys ),
+					'error'      => $e->getMessage(),
+				)
+			);
 		}
 
 		return $results;
@@ -230,10 +251,13 @@ class SAW_LMS_Transient_Driver implements SAW_LMS_Cache_Driver {
 			return $success;
 
 		} catch ( Exception $e ) {
-			SAW_LMS_Logger::init()->error( 'Transient cache set_multiple failed', array(
-				'values_count' => count( $values ),
-				'error' => $e->getMessage(),
-			) );
+			SAW_LMS_Logger::init()->error(
+				'Transient cache set_multiple failed',
+				array(
+					'values_count' => count( $values ),
+					'error'        => $e->getMessage(),
+				)
+			);
 		}
 
 		return false;
@@ -255,13 +279,15 @@ class SAW_LMS_Transient_Driver implements SAW_LMS_Cache_Driver {
 			if ( $this->set( $key, $new_value, 3600 ) ) {
 				return $new_value;
 			}
-
 		} catch ( Exception $e ) {
-			SAW_LMS_Logger::init()->error( 'Transient cache increment failed', array(
-				'key' => $key,
-				'offset' => $offset,
-				'error' => $e->getMessage(),
-			) );
+			SAW_LMS_Logger::init()->error(
+				'Transient cache increment failed',
+				array(
+					'key'    => $key,
+					'offset' => $offset,
+					'error'  => $e->getMessage(),
+				)
+			);
 		}
 
 		return false;
@@ -283,13 +309,15 @@ class SAW_LMS_Transient_Driver implements SAW_LMS_Cache_Driver {
 			if ( $this->set( $key, $new_value, 3600 ) ) {
 				return $new_value;
 			}
-
 		} catch ( Exception $e ) {
-			SAW_LMS_Logger::init()->error( 'Transient cache decrement failed', array(
-				'key' => $key,
-				'offset' => $offset,
-				'error' => $e->getMessage(),
-			) );
+			SAW_LMS_Logger::init()->error(
+				'Transient cache decrement failed',
+				array(
+					'key'    => $key,
+					'offset' => $offset,
+					'error'  => $e->getMessage(),
+				)
+			);
 		}
 
 		return false;
@@ -310,7 +338,7 @@ class SAW_LMS_Transient_Driver implements SAW_LMS_Cache_Driver {
 		try {
 			// Find expired transient timeout keys
 			$time = time();
-			
+
 			$expired_keys = $wpdb->get_col(
 				$wpdb->prepare(
 					"SELECT option_name FROM {$wpdb->options} 
@@ -331,26 +359,32 @@ class SAW_LMS_Transient_Driver implements SAW_LMS_Cache_Driver {
 			foreach ( $expired_keys as $timeout_key ) {
 				// Get the transient key (remove _transient_timeout_ prefix)
 				$transient_key = str_replace( '_transient_timeout_', '_transient_', $timeout_key );
-				$key = str_replace( '_transient_', '', $transient_key );
+				$key           = str_replace( '_transient_', '', $transient_key );
 
 				// Delete both the value and timeout
 				if ( delete_transient( $key ) ) {
-					$deleted++;
+					++$deleted;
 				}
 			}
 
 			if ( $deleted > 0 ) {
-				SAW_LMS_Logger::init()->info( 'Transient cache cleanup completed', array(
-					'deleted_count' => $deleted,
-				) );
+				SAW_LMS_Logger::init()->info(
+					'Transient cache cleanup completed',
+					array(
+						'deleted_count' => $deleted,
+					)
+				);
 			}
 
 			return $deleted;
 
 		} catch ( Exception $e ) {
-			SAW_LMS_Logger::init()->error( 'Transient cache cleanup failed', array(
-				'error' => $e->getMessage(),
-			) );
+			SAW_LMS_Logger::init()->error(
+				'Transient cache cleanup failed',
+				array(
+					'error' => $e->getMessage(),
+				)
+			);
 		}
 
 		return 0;
@@ -368,9 +402,9 @@ class SAW_LMS_Transient_Driver implements SAW_LMS_Cache_Driver {
 		global $wpdb;
 
 		$stats = array(
-			'total' => 0,
-			'active' => 0,
-			'expired' => 0,
+			'total'      => 0,
+			'active'     => 0,
+			'expired'    => 0,
 			'size_bytes' => 0,
 		);
 
@@ -387,7 +421,7 @@ class SAW_LMS_Transient_Driver implements SAW_LMS_Cache_Driver {
 			$stats['total'] = (int) ( $total_options / 2 );
 
 			// Count expired transients
-			$time = time();
+			$time          = time();
 			$expired_count = $wpdb->get_var(
 				$wpdb->prepare(
 					"SELECT COUNT(*) FROM {$wpdb->options} 
@@ -399,7 +433,7 @@ class SAW_LMS_Transient_Driver implements SAW_LMS_Cache_Driver {
 			);
 
 			$stats['expired'] = (int) $expired_count;
-			$stats['active'] = $stats['total'] - $stats['expired'];
+			$stats['active']  = $stats['total'] - $stats['expired'];
 
 			// Approximate size (only value options, not timeout options)
 			$stats['size_bytes'] = (int) $wpdb->get_var(
@@ -413,9 +447,12 @@ class SAW_LMS_Transient_Driver implements SAW_LMS_Cache_Driver {
 			);
 
 		} catch ( Exception $e ) {
-			SAW_LMS_Logger::init()->error( 'Transient cache stats failed', array(
-				'error' => $e->getMessage(),
-			) );
+			SAW_LMS_Logger::init()->error(
+				'Transient cache stats failed',
+				array(
+					'error' => $e->getMessage(),
+				)
+			);
 		}
 
 		return $stats;

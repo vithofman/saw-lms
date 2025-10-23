@@ -1,7 +1,7 @@
 <?php
 /**
  * Cache Driver Interface
- * 
+ *
  * Defines the contract for all cache drivers in the SAW LMS plugin.
  * Every cache driver (Redis, Database, Transient) must implement this interface.
  *
@@ -17,7 +17,7 @@ if ( ! defined( 'WPINC' ) ) {
 
 /**
  * SAW_LMS_Cache_Driver Interface
- * 
+ *
  * @since 1.0.0
  */
 interface SAW_LMS_Cache_Driver {

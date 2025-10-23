@@ -1,7 +1,7 @@
 <?php
 /**
  * Logger
- * 
+ *
  * PSR-3 compatible logger that writes to files and WordPress debug log
  *
  * @package    SAW_LMS
@@ -16,9 +16,9 @@ if ( ! defined( 'WPINC' ) ) {
 
 /**
  * SAW_LMS_Logger Class
- * 
+ *
  * PSR-3 compatible logger implementation
- * 
+ *
  * @since 1.0.0
  */
 class SAW_LMS_Logger {
@@ -92,7 +92,7 @@ class SAW_LMS_Logger {
 	 * @since 1.0.0
 	 */
 	private function setup_log_directory() {
-		$upload_dir = wp_upload_dir();
+		$upload_dir    = wp_upload_dir();
 		$this->log_dir = $upload_dir['basedir'] . '/saw-lms/logs';
 
 		// Create directory if it doesn't exist
@@ -273,7 +273,7 @@ class SAW_LMS_Logger {
 		// Add exception if present
 		if ( isset( $context['exception'] ) && $context['exception'] instanceof Exception ) {
 			$exception = $context['exception'];
-			$entry .= sprintf(
+			$entry    .= sprintf(
 				' | Exception: %s in %s:%d',
 				$exception->getMessage(),
 				$exception->getFile(),
@@ -351,12 +351,12 @@ class SAW_LMS_Logger {
 	 */
 	private function cleanup_old_logs( $days = 30 ) {
 		$files = glob( $this->log_dir . '/saw-lms-*.log' );
-		
+
 		if ( ! $files ) {
 			return;
 		}
 
-		$now = time();
+		$now       = time();
 		$threshold = $days * DAY_IN_SECONDS;
 
 		foreach ( $files as $file ) {
@@ -389,18 +389,18 @@ class SAW_LMS_Logger {
 
 		// Use tail-like approach
 		$log_lines = array();
-		$buffer = 4096;
+		$buffer    = 4096;
 		fseek( $file, -1, SEEK_END );
 
 		// Read backwards
 		$output = '';
-		$chunk = '';
+		$chunk  = '';
 		while ( ftell( $file ) > 0 && count( $log_lines ) < $lines ) {
 			$seek = min( ftell( $file ), $buffer );
 			fseek( $file, -$seek, SEEK_CUR );
 			$chunk = fread( $file, $seek ) . $chunk;
 			fseek( $file, -mb_strlen( $chunk, '8bit' ), SEEK_CUR );
-			
+
 			$log_lines = explode( "\n", $chunk );
 		}
 
@@ -421,7 +421,7 @@ class SAW_LMS_Logger {
 	 */
 	public function clear_logs() {
 		$files = glob( $this->log_dir . '/saw-lms-*.log' );
-		
+
 		if ( ! $files ) {
 			return false;
 		}

@@ -1,7 +1,7 @@
 <?php
 /**
  * Cache Helper
- * 
+ *
  * Utility class providing:
  * - Standard cache key generators for consistency
  * - Recommended TTL values for different data types
@@ -19,9 +19,9 @@ if ( ! defined( 'WPINC' ) ) {
 
 /**
  * SAW_LMS_Cache_Helper Class
- * 
+ *
  * Static helper class for cache operations
- * 
+ *
  * @since 1.0.0
  */
 class SAW_LMS_Cache_Helper {
@@ -262,11 +262,14 @@ class SAW_LMS_Cache_Helper {
 			$cache->delete( $key );
 		}
 
-		SAW_LMS_Logger::init()->debug( 'Enrollment cache invalidated', array(
-			'user_id' => $user_id,
-			'course_id' => $course_id,
-			'keys_deleted' => count( $keys_to_delete ),
-		) );
+		SAW_LMS_Logger::init()->debug(
+			'Enrollment cache invalidated',
+			array(
+				'user_id'      => $user_id,
+				'course_id'    => $course_id,
+				'keys_deleted' => count( $keys_to_delete ),
+			)
+		);
 	}
 
 	/**
@@ -293,11 +296,14 @@ class SAW_LMS_Cache_Helper {
 			$cache->delete( $key );
 		}
 
-		SAW_LMS_Logger::init()->debug( 'Progress cache invalidated', array(
-			'user_id' => $user_id,
-			'course_id' => $course_id,
-			'item_id' => $item_id,
-		) );
+		SAW_LMS_Logger::init()->debug(
+			'Progress cache invalidated',
+			array(
+				'user_id'   => $user_id,
+				'course_id' => $course_id,
+				'item_id'   => $item_id,
+			)
+		);
 	}
 
 	/**
@@ -321,9 +327,12 @@ class SAW_LMS_Cache_Helper {
 			$cache->delete( $key );
 		}
 
-		SAW_LMS_Logger::init()->debug( 'Points cache invalidated', array(
-			'user_id' => $user_id,
-		) );
+		SAW_LMS_Logger::init()->debug(
+			'Points cache invalidated',
+			array(
+				'user_id' => $user_id,
+			)
+		);
 	}
 
 	/**
@@ -347,9 +356,12 @@ class SAW_LMS_Cache_Helper {
 			$cache->delete( $key );
 		}
 
-		SAW_LMS_Logger::init()->debug( 'Group cache invalidated', array(
-			'group_id' => $group_id,
-		) );
+		SAW_LMS_Logger::init()->debug(
+			'Group cache invalidated',
+			array(
+				'group_id' => $group_id,
+			)
+		);
 	}
 
 	/**
@@ -365,9 +377,12 @@ class SAW_LMS_Cache_Helper {
 
 		$cache->delete( self::course_structure_key( $course_id ) );
 
-		SAW_LMS_Logger::init()->debug( 'Course structure cache invalidated', array(
-			'course_id' => $course_id,
-		) );
+		SAW_LMS_Logger::init()->debug(
+			'Course structure cache invalidated',
+			array(
+				'course_id' => $course_id,
+			)
+		);
 	}
 
 	/**
@@ -397,10 +412,13 @@ class SAW_LMS_Cache_Helper {
 		// For production, consider implementing a key tracking system
 		// or using cache tags if your driver supports them
 
-		SAW_LMS_Logger::init()->info( 'User cache invalidation requested', array(
-			'user_id' => $user_id,
-			'note' => 'Full invalidation may require cache flush',
-		) );
+		SAW_LMS_Logger::init()->info(
+			'User cache invalidation requested',
+			array(
+				'user_id' => $user_id,
+				'note'    => 'Full invalidation may require cache flush',
+			)
+		);
 	}
 
 	/**
@@ -416,9 +434,12 @@ class SAW_LMS_Cache_Helper {
 		// This would be implemented based on specific needs
 		// Example: Pre-cache user's active enrollments
 
-		SAW_LMS_Logger::init()->debug( 'User cache warmup started', array(
-			'user_id' => $user_id,
-		) );
+		SAW_LMS_Logger::init()->debug(
+			'User cache warmup started',
+			array(
+				'user_id' => $user_id,
+			)
+		);
 
 		// Pre-cache user enrollments
 		// $enrollments = saw_lms_get_user_enrollments($user_id);
@@ -437,9 +458,9 @@ class SAW_LMS_Cache_Helper {
 		$cache = SAW_LMS_Cache_Manager::init();
 
 		return array(
-			'driver' => $cache->get_driver_name(),
+			'driver'    => $cache->get_driver_name(),
 			'available' => $cache->is_available(),
-			'stats' => $cache->get_stats(),
+			'stats'     => $cache->get_stats(),
 		);
 	}
 
@@ -452,13 +473,13 @@ class SAW_LMS_Cache_Helper {
 	 */
 	public static function format_size( $bytes ) {
 		$units = array( 'B', 'KB', 'MB', 'GB', 'TB' );
-		
+
 		$bytes = max( $bytes, 0 );
-		$pow = floor( ( $bytes ? log( $bytes ) : 0 ) / log( 1024 ) );
-		$pow = min( $pow, count( $units ) - 1 );
-		
+		$pow   = floor( ( $bytes ? log( $bytes ) : 0 ) / log( 1024 ) );
+		$pow   = min( $pow, count( $units ) - 1 );
+
 		$bytes /= pow( 1024, $pow );
-		
+
 		return round( $bytes, 2 ) . ' ' . $units[ $pow ];
 	}
 }

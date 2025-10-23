@@ -1,7 +1,7 @@
 <?php
 /**
  * Cache Manager - UPGRADED VERSION
- * 
+ *
  * Central cache management system with intelligent driver auto-detection
  * and comprehensive statistics tracking.
  *
@@ -24,9 +24,9 @@ if ( ! defined( 'WPINC' ) ) {
 
 /**
  * SAW_LMS_Cache_Manager Class
- * 
+ *
  * Singleton cache manager with statistics tracking
- * 
+ *
  * @since 1.0.0
  */
 class SAW_LMS_Cache_Manager {
@@ -63,11 +63,11 @@ class SAW_LMS_Cache_Manager {
 	 */
 	private $runtime_stats = array(
 		'operations' => 0,
-		'hits' => 0,
-		'misses' => 0,
-		'writes' => 0,
-		'deletes' => 0,
-		'errors' => 0,
+		'hits'       => 0,
+		'misses'     => 0,
+		'writes'     => 0,
+		'deletes'    => 0,
+		'errors'     => 0,
 		'start_time' => 0,
 	);
 
@@ -112,16 +112,22 @@ class SAW_LMS_Cache_Manager {
 		if ( 'auto' !== $forced_driver ) {
 			// Try to use forced driver
 			if ( $this->init_specific_driver( $forced_driver ) ) {
-				SAW_LMS_Logger::init()->info( 'Cache driver forced by settings', array(
-					'driver' => $forced_driver,
-				) );
+				SAW_LMS_Logger::init()->info(
+					'Cache driver forced by settings',
+					array(
+						'driver' => $forced_driver,
+					)
+				);
 				return;
 			}
 
 			// If forced driver failed, log warning and continue auto-detection
-			SAW_LMS_Logger::init()->warning( 'Forced cache driver not available, falling back to auto-detection', array(
-				'requested_driver' => $forced_driver,
-			) );
+			SAW_LMS_Logger::init()->warning(
+				'Forced cache driver not available, falling back to auto-detection',
+				array(
+					'requested_driver' => $forced_driver,
+				)
+			);
 		}
 
 		// Auto-detection: Try Redis first
@@ -166,26 +172,35 @@ class SAW_LMS_Cache_Manager {
 
 			// Check if driver is available
 			if ( ! $driver->is_available() ) {
-				SAW_LMS_Logger::init()->debug( 'Cache driver not available', array(
-					'driver' => $driver_name,
-				) );
+				SAW_LMS_Logger::init()->debug(
+					'Cache driver not available',
+					array(
+						'driver' => $driver_name,
+					)
+				);
 				return false;
 			}
 
 			// Driver is available and functional
 			$this->driver = $driver;
-			
-			SAW_LMS_Logger::init()->info( 'Cache driver initialized', array(
-				'driver' => $this->driver->get_driver_name(),
-			) );
+
+			SAW_LMS_Logger::init()->info(
+				'Cache driver initialized',
+				array(
+					'driver' => $this->driver->get_driver_name(),
+				)
+			);
 
 			return true;
 
 		} catch ( Exception $e ) {
-			SAW_LMS_Logger::init()->error( 'Cache driver initialization failed', array(
-				'driver' => $driver_name,
-				'error' => $e->getMessage(),
-			) );
+			SAW_LMS_Logger::init()->error(
+				'Cache driver initialization failed',
+				array(
+					'driver' => $driver_name,
+					'error'  => $e->getMessage(),
+				)
+			);
 
 			return false;
 		}
@@ -234,25 +249,28 @@ class SAW_LMS_Cache_Manager {
 		}
 
 		try {
-			$this->runtime_stats['operations']++;
-			
+			++$this->runtime_stats['operations'];
+
 			$value = $this->driver->get( $key );
-			
+
 			if ( false !== $value && null !== $value ) {
-				$this->runtime_stats['hits']++;
+				++$this->runtime_stats['hits'];
 			} else {
-				$this->runtime_stats['misses']++;
+				++$this->runtime_stats['misses'];
 			}
-			
+
 			return $value;
 
 		} catch ( Exception $e ) {
-			$this->runtime_stats['errors']++;
-			
-			SAW_LMS_Logger::init()->error( 'Cache get failed', array(
-				'key'   => $key,
-				'error' => $e->getMessage(),
-			) );
+			++$this->runtime_stats['errors'];
+
+			SAW_LMS_Logger::init()->error(
+				'Cache get failed',
+				array(
+					'key'   => $key,
+					'error' => $e->getMessage(),
+				)
+			);
 
 			return false;
 		}
@@ -273,19 +291,22 @@ class SAW_LMS_Cache_Manager {
 		}
 
 		try {
-			$this->runtime_stats['operations']++;
-			$this->runtime_stats['writes']++;
-			
+			++$this->runtime_stats['operations'];
+			++$this->runtime_stats['writes'];
+
 			return $this->driver->set( $key, $value, $ttl );
 
 		} catch ( Exception $e ) {
-			$this->runtime_stats['errors']++;
-			
-			SAW_LMS_Logger::init()->error( 'Cache set failed', array(
-				'key'   => $key,
-				'ttl'   => $ttl,
-				'error' => $e->getMessage(),
-			) );
+			++$this->runtime_stats['errors'];
+
+			SAW_LMS_Logger::init()->error(
+				'Cache set failed',
+				array(
+					'key'   => $key,
+					'ttl'   => $ttl,
+					'error' => $e->getMessage(),
+				)
+			);
 
 			return false;
 		}
@@ -304,18 +325,21 @@ class SAW_LMS_Cache_Manager {
 		}
 
 		try {
-			$this->runtime_stats['operations']++;
-			$this->runtime_stats['deletes']++;
-			
+			++$this->runtime_stats['operations'];
+			++$this->runtime_stats['deletes'];
+
 			return $this->driver->delete( $key );
 
 		} catch ( Exception $e ) {
-			$this->runtime_stats['errors']++;
-			
-			SAW_LMS_Logger::init()->error( 'Cache delete failed', array(
-				'key'   => $key,
-				'error' => $e->getMessage(),
-			) );
+			++$this->runtime_stats['errors'];
+
+			SAW_LMS_Logger::init()->error(
+				'Cache delete failed',
+				array(
+					'key'   => $key,
+					'error' => $e->getMessage(),
+				)
+			);
 
 			return false;
 		}
@@ -334,19 +358,22 @@ class SAW_LMS_Cache_Manager {
 
 		try {
 			$result = $this->driver->flush();
-			
+
 			if ( $result ) {
 				SAW_LMS_Logger::init()->info( 'Cache flushed successfully' );
 			}
-			
+
 			return $result;
 
 		} catch ( Exception $e ) {
-			$this->runtime_stats['errors']++;
-			
-			SAW_LMS_Logger::init()->error( 'Cache flush failed', array(
-				'error' => $e->getMessage(),
-			) );
+			++$this->runtime_stats['errors'];
+
+			SAW_LMS_Logger::init()->error(
+				'Cache flush failed',
+				array(
+					'error' => $e->getMessage(),
+				)
+			);
 
 			return false;
 		}
@@ -368,10 +395,13 @@ class SAW_LMS_Cache_Manager {
 			return $this->driver->exists( $key );
 
 		} catch ( Exception $e ) {
-			SAW_LMS_Logger::init()->error( 'Cache exists check failed', array(
-				'key'   => $key,
-				'error' => $e->getMessage(),
-			) );
+			SAW_LMS_Logger::init()->error(
+				'Cache exists check failed',
+				array(
+					'key'   => $key,
+					'error' => $e->getMessage(),
+				)
+			);
 
 			return false;
 		}
@@ -391,27 +421,30 @@ class SAW_LMS_Cache_Manager {
 
 		try {
 			$this->runtime_stats['operations'] += count( $keys );
-			
+
 			$results = $this->driver->get_multiple( $keys );
-			
+
 			// Count hits and misses
 			foreach ( $keys as $key ) {
 				if ( isset( $results[ $key ] ) ) {
-					$this->runtime_stats['hits']++;
+					++$this->runtime_stats['hits'];
 				} else {
-					$this->runtime_stats['misses']++;
+					++$this->runtime_stats['misses'];
 				}
 			}
-			
+
 			return $results;
 
 		} catch ( Exception $e ) {
-			$this->runtime_stats['errors']++;
-			
-			SAW_LMS_Logger::init()->error( 'Cache get_multiple failed', array(
-				'keys_count' => count( $keys ),
-				'error'      => $e->getMessage(),
-			) );
+			++$this->runtime_stats['errors'];
+
+			SAW_LMS_Logger::init()->error(
+				'Cache get_multiple failed',
+				array(
+					'keys_count' => count( $keys ),
+					'error'      => $e->getMessage(),
+				)
+			);
 
 			return array();
 		}
@@ -432,18 +465,21 @@ class SAW_LMS_Cache_Manager {
 
 		try {
 			$this->runtime_stats['operations'] += count( $values );
-			$this->runtime_stats['writes'] += count( $values );
-			
+			$this->runtime_stats['writes']     += count( $values );
+
 			return $this->driver->set_multiple( $values, $ttl );
 
 		} catch ( Exception $e ) {
-			$this->runtime_stats['errors']++;
-			
-			SAW_LMS_Logger::init()->error( 'Cache set_multiple failed', array(
-				'values_count' => count( $values ),
-				'ttl'          => $ttl,
-				'error'        => $e->getMessage(),
-			) );
+			++$this->runtime_stats['errors'];
+
+			SAW_LMS_Logger::init()->error(
+				'Cache set_multiple failed',
+				array(
+					'values_count' => count( $values ),
+					'ttl'          => $ttl,
+					'error'        => $e->getMessage(),
+				)
+			);
 
 			return false;
 		}
@@ -463,18 +499,21 @@ class SAW_LMS_Cache_Manager {
 		}
 
 		try {
-			$this->runtime_stats['operations']++;
-			
+			++$this->runtime_stats['operations'];
+
 			return $this->driver->increment( $key, $offset );
 
 		} catch ( Exception $e ) {
-			$this->runtime_stats['errors']++;
-			
-			SAW_LMS_Logger::init()->error( 'Cache increment failed', array(
-				'key'    => $key,
-				'offset' => $offset,
-				'error'  => $e->getMessage(),
-			) );
+			++$this->runtime_stats['errors'];
+
+			SAW_LMS_Logger::init()->error(
+				'Cache increment failed',
+				array(
+					'key'    => $key,
+					'offset' => $offset,
+					'error'  => $e->getMessage(),
+				)
+			);
 
 			return false;
 		}
@@ -494,18 +533,21 @@ class SAW_LMS_Cache_Manager {
 		}
 
 		try {
-			$this->runtime_stats['operations']++;
-			
+			++$this->runtime_stats['operations'];
+
 			return $this->driver->decrement( $key, $offset );
 
 		} catch ( Exception $e ) {
-			$this->runtime_stats['errors']++;
-			
-			SAW_LMS_Logger::init()->error( 'Cache decrement failed', array(
-				'key'    => $key,
-				'offset' => $offset,
-				'error'  => $e->getMessage(),
-			) );
+			++$this->runtime_stats['errors'];
+
+			SAW_LMS_Logger::init()->error(
+				'Cache decrement failed',
+				array(
+					'key'    => $key,
+					'offset' => $offset,
+					'error'  => $e->getMessage(),
+				)
+			);
 
 			return false;
 		}
@@ -552,31 +594,31 @@ class SAW_LMS_Cache_Manager {
 	 */
 	public function get_stats() {
 		$runtime = microtime( true ) - $this->runtime_stats['start_time'];
-		
+
 		$total_reads = $this->runtime_stats['hits'] + $this->runtime_stats['misses'];
-		$hit_rate = $total_reads > 0 
+		$hit_rate    = $total_reads > 0
 			? round( ( $this->runtime_stats['hits'] / $total_reads ) * 100, 2 )
 			: 0.0;
 
 		return array(
-			'driver' => $this->get_driver_name(),
+			'driver'    => $this->get_driver_name(),
 			'available' => $this->is_available(),
-			'runtime' => array(
+			'runtime'   => array(
 				'total_operations' => $this->runtime_stats['operations'],
-				'reads' => $total_reads,
-				'hits' => $this->runtime_stats['hits'],
-				'misses' => $this->runtime_stats['misses'],
-				'hit_rate' => $hit_rate,
-				'writes' => $this->runtime_stats['writes'],
-				'deletes' => $this->runtime_stats['deletes'],
-				'errors' => $this->runtime_stats['errors'],
-				'uptime_seconds' => round( $runtime, 3 ),
+				'reads'            => $total_reads,
+				'hits'             => $this->runtime_stats['hits'],
+				'misses'           => $this->runtime_stats['misses'],
+				'hit_rate'         => $hit_rate,
+				'writes'           => $this->runtime_stats['writes'],
+				'deletes'          => $this->runtime_stats['deletes'],
+				'errors'           => $this->runtime_stats['errors'],
+				'uptime_seconds'   => round( $runtime, 3 ),
 			),
-			'memory' => array(
-				'current' => memory_get_usage( true ),
-				'peak' => memory_get_peak_usage( true ),
+			'memory'    => array(
+				'current'           => memory_get_usage( true ),
+				'peak'              => memory_get_peak_usage( true ),
 				'current_formatted' => size_format( memory_get_usage( true ), 2 ),
-				'peak_formatted' => size_format( memory_get_peak_usage( true ), 2 ),
+				'peak_formatted'    => size_format( memory_get_peak_usage( true ), 2 ),
 			),
 		);
 	}
@@ -589,7 +631,7 @@ class SAW_LMS_Cache_Manager {
 	 */
 	public function get_stats_html() {
 		$stats = $this->get_stats();
-		
+
 		ob_start();
 		?>
 		<div class="saw-lms-cache-stats">
@@ -610,11 +652,11 @@ class SAW_LMS_Cache_Manager {
 	public function reset_stats() {
 		$this->runtime_stats = array(
 			'operations' => 0,
-			'hits' => 0,
-			'misses' => 0,
-			'writes' => 0,
-			'deletes' => 0,
-			'errors' => 0,
+			'hits'       => 0,
+			'misses'     => 0,
+			'writes'     => 0,
+			'deletes'    => 0,
+			'errors'     => 0,
 			'start_time' => microtime( true ),
 		);
 	}

@@ -171,11 +171,14 @@ class SAW_LMS {
 		$this->error_handler->setup_handlers();
 
 		// Log plugin initialization
-		$this->logger->info( 'SAW LMS Plugin initialized', array(
-			'version'     => $this->version,
-			'php_version' => PHP_VERSION,
-			'wp_version'  => get_bloginfo( 'version' ),
-		) );
+		$this->logger->info(
+			'SAW LMS Plugin initialized',
+			array(
+				'version'     => $this->version,
+				'php_version' => PHP_VERSION,
+				'wp_version'  => get_bloginfo( 'version' ),
+			)
+		);
 	}
 
 	/**
@@ -188,10 +191,13 @@ class SAW_LMS {
 		$this->cache_manager = SAW_LMS_Cache_Manager::init();
 
 		// Log which driver was selected
-		$this->logger->info( 'Cache system ready', array(
-			'driver'    => $this->cache_manager->get_driver_name(),
-			'available' => $this->cache_manager->is_available(),
-		) );
+		$this->logger->info(
+			'Cache system ready',
+			array(
+				'driver'    => $this->cache_manager->get_driver_name(),
+				'available' => $this->cache_manager->is_available(),
+			)
+		);
 	}
 
 	/**
