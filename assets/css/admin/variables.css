@@ -1,0 +1,227 @@
+/**
+ * SAW LMS Admin Design System - CSS Variables
+ *
+ * Definice všech design tokenů pro konzistentní vzhled napříč admin rozhraním.
+ * Inspirováno moderními SaaS aplikacemi s důrazem na čitelnost a přístupnost.
+ *
+ * @package    SAW_LMS
+ * @subpackage SAW_LMS/assets/css/admin
+ * @since      1.0.0
+ * @version    1.9.0
+ */
+
+:root {
+	/* ============================================
+	   PRIMARY COLORS - WordPress Blue jako základ
+	   ============================================ */
+	--saw-primary: #2271b1;
+	--saw-primary-hover: #135e96;
+	--saw-primary-light: #e5f5fb;
+	--saw-primary-dark: #0a4b78;
+	--saw-primary-shadow: rgba(34, 113, 177, 0.2);
+
+	/* ============================================
+	   SEMANTIC COLORS - Pro různé stavy a akce
+	   ============================================ */
+	--saw-success: #46b450;
+	--saw-success-hover: #2ea32d;
+	--saw-success-light: #ecfdf5;
+	--saw-success-dark: #0f5132;
+
+	--saw-warning: #ffb900;
+	--saw-warning-hover: #e6a800;
+	--saw-warning-light: #fffbeb;
+	--saw-warning-dark: #92400e;
+
+	--saw-error: #dc3232;
+	--saw-error-hover: #b32d2e;
+	--saw-error-light: #fef2f2;
+	--saw-error-dark: #991b1b;
+
+	--saw-info: #00a0d2;
+	--saw-info-hover: #0087be;
+	--saw-info-light: #eff6ff;
+	--saw-info-dark: #1e40af;
+
+	/* ============================================
+	   NEUTRAL GRAY SCALE - Pro text a pozadí
+	   ============================================ */
+	--saw-white: #ffffff;
+	--saw-black: #000000;
+
+	--saw-gray-50: #f9fafb;
+	--saw-gray-100: #f3f4f6;
+	--saw-gray-200: #e5e7eb;
+	--saw-gray-300: #d1d5db;
+	--saw-gray-400: #9ca3af;
+	--saw-gray-500: #6b7280;
+	--saw-gray-600: #4b5563;
+	--saw-gray-700: #374151;
+	--saw-gray-800: #1f2937;
+	--saw-gray-900: #111827;
+
+	/* ============================================
+	   TYPOGRAPHY - Fonts a velikosti
+	   ============================================ */
+	--saw-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+	--saw-font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+
+	/* Font Sizes */
+	--saw-text-xs: 0.75rem;      /* 12px */
+	--saw-text-sm: 0.875rem;     /* 14px */
+	--saw-text-base: 1rem;       /* 16px */
+	--saw-text-lg: 1.125rem;     /* 18px */
+	--saw-text-xl: 1.25rem;      /* 20px */
+	--saw-text-2xl: 1.5rem;      /* 24px */
+	--saw-text-3xl: 1.875rem;    /* 30px */
+	--saw-text-4xl: 2.25rem;     /* 36px */
+
+	/* Font Weights */
+	--saw-font-normal: 400;
+	--saw-font-medium: 500;
+	--saw-font-semibold: 600;
+	--saw-font-bold: 700;
+
+	/* Line Heights */
+	--saw-leading-none: 1;
+	--saw-leading-tight: 1.25;
+	--saw-leading-normal: 1.5;
+	--saw-leading-relaxed: 1.75;
+	--saw-leading-loose: 2;
+
+	/* ============================================
+	   SPACING SCALE - Konzistentní mezery
+	   ============================================ */
+	--saw-space-0: 0;
+	--saw-space-1: 0.25rem;   /* 4px */
+	--saw-space-2: 0.5rem;    /* 8px */
+	--saw-space-3: 0.75rem;   /* 12px */
+	--saw-space-4: 1rem;      /* 16px */
+	--saw-space-5: 1.25rem;   /* 20px */
+	--saw-space-6: 1.5rem;    /* 24px */
+	--saw-space-7: 1.75rem;   /* 28px */
+	--saw-space-8: 2rem;      /* 32px */
+	--saw-space-10: 2.5rem;   /* 40px */
+	--saw-space-12: 3rem;     /* 48px */
+	--saw-space-16: 4rem;     /* 64px */
+	--saw-space-20: 5rem;     /* 80px */
+	--saw-space-24: 6rem;     /* 96px */
+
+	/* ============================================
+	   BORDER RADIUS - Zaoblení rohů
+	   ============================================ */
+	--saw-radius-none: 0;
+	--saw-radius-sm: 0.125rem;   /* 2px */
+	--saw-radius: 0.25rem;       /* 4px */
+	--saw-radius-md: 0.375rem;   /* 6px */
+	--saw-radius-lg: 0.5rem;     /* 8px */
+	--saw-radius-xl: 0.75rem;    /* 12px */
+	--saw-radius-2xl: 1rem;      /* 16px */
+	--saw-radius-3xl: 1.5rem;    /* 24px */
+	--saw-radius-full: 9999px;
+
+	/* ============================================
+	   SHADOWS - Hloubka a elevation
+	   ============================================ */
+	--saw-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+	--saw-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+	--saw-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+	--saw-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+	--saw-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+	--saw-shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+	--saw-shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+
+	/* ============================================
+	   TRANSITIONS - Animace a timing
+	   ============================================ */
+	--saw-transition-fast: 150ms ease;
+	--saw-transition: 200ms ease;
+	--saw-transition-slow: 300ms ease;
+	--saw-transition-all: all 200ms ease;
+
+	/* Easing functions */
+	--saw-ease-in: cubic-bezier(0.4, 0, 1, 1);
+	--saw-ease-out: cubic-bezier(0, 0, 0.2, 1);
+	--saw-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+	/* ============================================
+	   Z-INDEX SCALE - Layering
+	   ============================================ */
+	--saw-z-base: 0;
+	--saw-z-dropdown: 1000;
+	--saw-z-sticky: 1020;
+	--saw-z-fixed: 1030;
+	--saw-z-modal-backdrop: 1040;
+	--saw-z-modal: 1050;
+	--saw-z-popover: 1060;
+	--saw-z-tooltip: 1070;
+	--saw-z-notification: 1080;
+
+	/* ============================================
+	   BREAKPOINTS - Pro responzivitu
+	   ============================================ */
+	--saw-breakpoint-sm: 640px;
+	--saw-breakpoint-md: 768px;
+	--saw-breakpoint-lg: 1024px;
+	--saw-breakpoint-xl: 1280px;
+	--saw-breakpoint-2xl: 1536px;
+
+	/* ============================================
+	   COMPONENT SPECIFIC - Pro specifické prvky
+	   ============================================ */
+	
+	/* Buttons */
+	--saw-button-padding-sm: 0.375rem 0.75rem;
+	--saw-button-padding: 0.5rem 1rem;
+	--saw-button-padding-lg: 0.75rem 1.5rem;
+	--saw-button-height-sm: 2rem;
+	--saw-button-height: 2.5rem;
+	--saw-button-height-lg: 3rem;
+
+	/* Forms */
+	--saw-input-height: 2.5rem;
+	--saw-input-padding: 0.5rem 0.75rem;
+	--saw-input-border: 1px solid var(--saw-gray-300);
+	--saw-input-border-focus: 1px solid var(--saw-primary);
+	--saw-input-bg: var(--saw-white);
+	--saw-input-bg-disabled: var(--saw-gray-100);
+
+	/* Cards */
+	--saw-card-padding: 1.5rem;
+	--saw-card-bg: var(--saw-white);
+	--saw-card-border: 1px solid var(--saw-gray-200);
+
+	/* Tables */
+	--saw-table-row-height: 3rem;
+	--saw-table-cell-padding: 0.75rem 1rem;
+	--saw-table-header-bg: var(--saw-gray-50);
+	--saw-table-border: 1px solid var(--saw-gray-200);
+
+	/* Dashboard */
+	--saw-stat-card-min-height: 120px;
+	--saw-dashboard-gap: 1.5rem;
+}
+
+/**
+ * Dark mode variables - Pro budoucí implementaci
+ * Zatím nepoužito, ale připraveno
+ */
+@media (prefers-color-scheme: dark) {
+	:root {
+		/* Dark mode bude implementováno v pozdější fázi */
+	}
+}
+
+/**
+ * Print styles - Úprava proměnných pro tisk
+ */
+@media print {
+	:root {
+		--saw-shadow-sm: none;
+		--saw-shadow: none;
+		--saw-shadow-md: none;
+		--saw-shadow-lg: none;
+		--saw-shadow-xl: none;
+		--saw-shadow-2xl: none;
+	}
+}

@@ -5,9 +5,12 @@
  * This is used to define internationalization, admin-specific hooks, and
  * public-facing site hooks.
  *
+ * UPDATED in Phase 1.9: Added Admin Assets loader for new design system.
+ *
  * @package    SAW_LMS
  * @subpackage SAW_LMS/includes
  * @since      1.0.0
+ * @version    1.9.0
  */
 
 // If this file is called directly, abort.
@@ -17,9 +20,9 @@ if ( ! defined( 'WPINC' ) ) {
 
 /**
  * SAW_LMS Class
- * 
+ *
  * Main plugin class (Singleton)
- * 
+ *
  * @since 1.0.0
  */
 class SAW_LMS {
@@ -113,6 +116,8 @@ class SAW_LMS {
 	/**
 	 * Load the required dependencies
 	 *
+	 * UPDATED in Phase 1.9: Added Admin Assets loader.
+	 *
 	 * @since 1.0.0
 	 */
 	private function load_dependencies() {
@@ -138,6 +143,7 @@ class SAW_LMS {
 		 * Admin classes
 		 */
 		if ( is_admin() ) {
+			require_once SAW_LMS_PLUGIN_DIR . 'admin/class-admin-assets.php';     // NEW in Phase 1.9
 			require_once SAW_LMS_PLUGIN_DIR . 'admin/class-admin-menu.php';
 			require_once SAW_LMS_PLUGIN_DIR . 'admin/class-cache-test-page.php';
 		}
@@ -157,18 +163,18 @@ class SAW_LMS {
 
 		// Initialize Error Handler
 		$this->error_handler = SAW_LMS_Error_Handler::init();
-		
+
 		// Set logger in error handler
 		$this->error_handler->set_logger( $this->logger );
-		
+
 		// Setup error handlers
 		$this->error_handler->setup_handlers();
 
 		// Log plugin initialization
 		$this->logger->info( 'SAW LMS Plugin initialized', array(
-			'version' => $this->version,
+			'version'     => $this->version,
 			'php_version' => PHP_VERSION,
-			'wp_version' => get_bloginfo( 'version' ),
+			'wp_version'  => get_bloginfo( 'version' ),
 		) );
 	}
 
@@ -183,7 +189,7 @@ class SAW_LMS {
 
 		// Log which driver was selected
 		$this->logger->info( 'Cache system ready', array(
-			'driver' => $this->cache_manager->get_driver_name(),
+			'driver'    => $this->cache_manager->get_driver_name(),
 			'available' => $this->cache_manager->is_available(),
 		) );
 	}
@@ -201,12 +207,18 @@ class SAW_LMS {
 	/**
 	 * Register all hooks related to admin area
 	 *
+	 * UPDATED in Phase 1.9: Added Admin Assets hooks.
+	 *
 	 * @since 1.0.0
 	 */
 	private function define_admin_hooks() {
 		if ( ! is_admin() ) {
 			return;
 		}
+
+		// Admin Assets - NEW in Phase 1.9
+		$admin_assets = new SAW_LMS_Admin_Assets( $this->plugin_name, $this->version );
+		$admin_assets->init_hooks(); // This registers all enqueue and style hooks
 
 		// Admin menu
 		$admin_menu = new SAW_LMS_Admin_Menu( $this->plugin_name, $this->version );
@@ -243,9 +255,9 @@ class SAW_LMS {
 			admin_url( 'admin.php?page=saw-lms' ),
 			__( 'Dashboard', 'saw-lms' )
 		);
-		
+
 		array_unshift( $links, $settings_link );
-		
+
 		return $links;
 	}
 
