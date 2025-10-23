@@ -5,10 +5,12 @@
  * Vytvoření menu v administraci s moderním dashboardem.
  * Používá nový design system (Fáze 1.9).
  *
+ * UPDATED in Phase 2.1: Added Courses submenu item.
+ *
  * @package    SAW_LMS
  * @subpackage SAW_LMS/admin
  * @since      1.0.0
- * @version    1.9.0
+ * @version    2.1.0
  */
 
 // If this file is called directly, abort.
@@ -56,6 +58,8 @@ class SAW_LMS_Admin_Menu {
 	/**
 	 * Add admin menu pages
 	 *
+	 * UPDATED in Phase 2.1: Added Courses submenu.
+	 *
 	 * @since 1.0.0
 	 */
 	public function add_menu() {
@@ -79,6 +83,29 @@ class SAW_LMS_Admin_Menu {
 			'saw-lms',
 			array( $this, 'display_dashboard' )
 		);
+
+		// Submenu - Courses (NEW in Phase 2.1)
+		// Tento odkaz povede na standardní edit.php pro CPT saw_course
+		if ( post_type_exists( 'saw_course' ) ) {
+			add_submenu_page(
+				'saw-lms',
+				__( 'Courses', 'saw-lms' ),
+				__( 'Courses', 'saw-lms' ),
+				'edit_posts',
+				'edit.php?post_type=saw_course',
+				''
+			);
+		} else {
+			// Fallback pokud CPT ještě není zaregistrován
+			add_submenu_page(
+				'saw-lms',
+				__( 'Courses', 'saw-lms' ),
+				__( 'Courses', 'saw-lms' ) . ' <span class="awaiting-mod">!</span>',
+				'manage_options',
+				'saw-lms-courses-placeholder',
+				array( $this, 'display_courses_placeholder' )
+			);
+		}
 
 		// Submenu - Plugin Info
 		add_submenu_page(
@@ -109,6 +136,9 @@ class SAW_LMS_Admin_Menu {
 		// Get statistics
 		$stats = $this->get_dashboard_stats();
 
+		// Check if CPT are registered
+		$cpt_registered = post_type_exists( 'saw_course' );
+
 		?>
 		<div class="saw-admin-page">
 			
@@ -123,6 +153,13 @@ class SAW_LMS_Admin_Menu {
 					</p>
 				</div>
 				<div class="saw-page-actions">
+					<?php if ( $cpt_registered ) : ?>
+						<a href="<?php echo esc_url( admin_url( 'post-new.php?post_type=saw_course' ) ); ?>" 
+						   class="saw-btn saw-btn-primary">
+							<span class="dashicons dashicons-plus-alt"></span>
+							<?php esc_html_e( 'New Course', 'saw-lms' ); ?>
+						</a>
+					<?php endif; ?>
 					<a href="<?php echo esc_url( admin_url( 'admin.php?page=saw-lms-cache-test' ) ); ?>" 
 					   class="saw-btn saw-btn-secondary">
 						<span class="dashicons dashicons-admin-tools"></span>
@@ -131,16 +168,29 @@ class SAW_LMS_Admin_Menu {
 				</div>
 			</div>
 
-			<!-- Welcome Alert -->
-			<div class="saw-alert saw-alert-success">
-				<span class="saw-alert-icon">🎉</span>
-				<div class="saw-alert-content">
-					<p class="saw-alert-title"><?php esc_html_e( 'Plugin is Active!', 'saw-lms' ); ?></p>
-					<p class="saw-alert-message">
-						<?php esc_html_e( 'All core systems are ready. Database tables created, cache system initialized, and logging active.', 'saw-lms' ); ?>
-					</p>
+			<!-- CPT Warning if not registered -->
+			<?php if ( ! $cpt_registered ) : ?>
+				<div class="saw-alert saw-alert-warning">
+					<span class="saw-alert-icon">⚠️</span>
+					<div class="saw-alert-content">
+						<p class="saw-alert-title"><?php esc_html_e( 'Custom Post Types Not Loaded', 'saw-lms' ); ?></p>
+						<p class="saw-alert-message">
+							<?php esc_html_e( 'Course post types are not yet available. Upload all files from Phase 2.1 to enable courses, sections, lessons, and quizzes.', 'saw-lms' ); ?>
+						</p>
+					</div>
 				</div>
-			</div>
+			<?php else : ?>
+				<!-- Welcome Alert -->
+				<div class="saw-alert saw-alert-success">
+					<span class="saw-alert-icon">🎉</span>
+					<div class="saw-alert-content">
+						<p class="saw-alert-title"><?php esc_html_e( 'Plugin is Active!', 'saw-lms' ); ?></p>
+						<p class="saw-alert-message">
+							<?php esc_html_e( 'All core systems are ready. Database tables created, cache system initialized, and custom post types registered.', 'saw-lms' ); ?>
+						</p>
+					</div>
+				</div>
+			<?php endif; ?>
 
 			<!-- Stats Grid -->
 			<div class="saw-dashboard-grid">
@@ -220,24 +270,25 @@ class SAW_LMS_Admin_Menu {
 							<div class="mb-4">
 								<div class="d-flex justify-between align-center mb-2">
 									<span class="font-semibold text-gray-700">
-										<?php esc_html_e( 'Phase 1.9: Admin Design System', 'saw-lms' ); ?>
+										<?php esc_html_e( 'Phase 2.1: Custom Post Types', 'saw-lms' ); ?>
 									</span>
-									<span class="saw-badge saw-badge-success">
-										<?php esc_html_e( 'In Progress', 'saw-lms' ); ?>
+									<span class="saw-badge <?php echo $cpt_registered ? 'saw-badge-success' : 'saw-badge-warning'; ?>">
+										<?php echo $cpt_registered ? esc_html__( 'Active', 'saw-lms' ) : esc_html__( 'Pending', 'saw-lms' ); ?>
 									</span>
 								</div>
 								<div class="saw-progress">
-									<div class="saw-progress-bar is-success" style="width: 75%;"></div>
+									<div class="saw-progress-bar <?php echo $cpt_registered ? 'is-success' : 'is-warning'; ?>" 
+									     style="width: <?php echo $cpt_registered ? '100' : '50'; ?>%;"></div>
 								</div>
 							</div>
 
 							<h3 class="text-base font-semibold mb-2">
-								<?php esc_html_e( 'Completed in this phase:', 'saw-lms' ); ?>
+								<?php esc_html_e( 'Completed:', 'saw-lms' ); ?>
 							</h3>
 							<ul class="saw-list">
 								<li class="saw-list-item">
 									<span class="dashicons dashicons-yes text-success"></span>
-									<?php esc_html_e( '15 Database tables created', 'saw-lms' ); ?>
+									<?php esc_html_e( '17 Database tables created', 'saw-lms' ); ?>
 								</li>
 								<li class="saw-list-item">
 									<span class="dashicons dashicons-yes text-success"></span>
@@ -251,6 +302,17 @@ class SAW_LMS_Admin_Menu {
 									<span class="dashicons dashicons-yes text-success"></span>
 									<?php esc_html_e( 'Modern admin design system', 'saw-lms' ); ?>
 								</li>
+								<?php if ( $cpt_registered ) : ?>
+									<li class="saw-list-item">
+										<span class="dashicons dashicons-yes text-success"></span>
+										<?php esc_html_e( 'Custom Post Types (Courses, Sections, Lessons, Quizzes)', 'saw-lms' ); ?>
+									</li>
+								<?php else : ?>
+									<li class="saw-list-item">
+										<span class="dashicons dashicons-clock text-warning"></span>
+										<?php esc_html_e( 'Custom Post Types (upload Phase 2.1 files)', 'saw-lms' ); ?>
+									</li>
+								<?php endif; ?>
 							</ul>
 
 							<h3 class="text-base font-semibold mb-2 mt-4">
@@ -259,11 +321,11 @@ class SAW_LMS_Admin_Menu {
 							<ul class="saw-list">
 								<li class="saw-list-item">
 									<span class="dashicons dashicons-clock text-warning"></span>
-									<?php esc_html_e( 'Custom Post Types (Phase 2)', 'saw-lms' ); ?>
+									<?php esc_html_e( 'Course Builder UI (Phase 3)', 'saw-lms' ); ?>
 								</li>
 								<li class="saw-list-item">
 									<span class="dashicons dashicons-clock text-warning"></span>
-									<?php esc_html_e( 'Course Builder UI (Phase 3)', 'saw-lms' ); ?>
+									<?php esc_html_e( 'Frontend Display (Phase 4)', 'saw-lms' ); ?>
 								</li>
 								<li class="saw-list-item">
 									<span class="dashicons dashicons-clock text-warning"></span>
@@ -282,8 +344,20 @@ class SAW_LMS_Admin_Menu {
 						</div>
 						<div class="saw-card-body">
 							<div class="saw-cluster-3">
+								<?php if ( $cpt_registered ) : ?>
+									<a href="<?php echo esc_url( admin_url( 'post-new.php?post_type=saw_course' ) ); ?>" 
+									   class="saw-btn saw-btn-primary">
+										<span class="dashicons dashicons-plus-alt"></span>
+										<?php esc_html_e( 'Create Course', 'saw-lms' ); ?>
+									</a>
+									<a href="<?php echo esc_url( admin_url( 'edit.php?post_type=saw_course' ) ); ?>" 
+									   class="saw-btn saw-btn-secondary">
+										<span class="dashicons dashicons-list-view"></span>
+										<?php esc_html_e( 'View All Courses', 'saw-lms' ); ?>
+									</a>
+								<?php endif; ?>
 								<a href="<?php echo esc_url( admin_url( 'admin.php?page=saw-lms-cache-test' ) ); ?>" 
-								   class="saw-btn saw-btn-primary">
+								   class="saw-btn saw-btn-secondary">
 									<span class="dashicons dashicons-admin-tools"></span>
 									<?php esc_html_e( 'Test Cache System', 'saw-lms' ); ?>
 								</a>
@@ -346,6 +420,16 @@ class SAW_LMS_Admin_Menu {
 								</tr>
 								<tr>
 									<td class="py-2">
+										<strong><?php esc_html_e( 'CPT Status:', 'saw-lms' ); ?></strong>
+									</td>
+									<td class="py-2 text-right">
+										<span class="saw-badge <?php echo $cpt_registered ? 'saw-badge-success' : 'saw-badge-warning'; ?>">
+											<?php echo $cpt_registered ? esc_html__( 'Active', 'saw-lms' ) : esc_html__( 'Missing', 'saw-lms' ); ?>
+										</span>
+									</td>
+								</tr>
+								<tr>
+									<td class="py-2">
 										<strong><?php esc_html_e( 'Installed:', 'saw-lms' ); ?></strong>
 									</td>
 									<td class="py-2 text-right text-sm text-gray-600">
@@ -376,8 +460,118 @@ class SAW_LMS_Admin_Menu {
 						</div>
 					</div>
 
+					<!-- Courses Card (if CPT registered) -->
+					<?php if ( $cpt_registered ) : ?>
+						<div class="saw-card mt-6">
+							<div class="saw-card-header">
+								<h3 class="saw-card-title">
+									<?php esc_html_e( 'Courses', 'saw-lms' ); ?>
+								</h3>
+							</div>
+							<div class="saw-card-body text-center">
+								<div class="saw-stat-value text-primary">
+									<?php 
+									$course_count = wp_count_posts( 'saw_course' );
+									echo esc_html( number_format_i18n( $course_count->publish ) ); 
+									?>
+								</div>
+								<p class="text-sm text-gray-600 mt-2">
+									<?php esc_html_e( 'Published courses', 'saw-lms' ); ?>
+								</p>
+								<a href="<?php echo esc_url( admin_url( 'edit.php?post_type=saw_course' ) ); ?>" 
+								   class="saw-btn saw-btn-sm saw-btn-secondary mt-3">
+									<?php esc_html_e( 'Manage Courses', 'saw-lms' ); ?>
+								</a>
+							</div>
+						</div>
+					<?php endif; ?>
+
 				</div>
 
+			</div>
+
+		</div>
+		<?php
+	}
+
+	/**
+	 * Display Courses Placeholder page
+	 *
+	 * Shown when CPT files are not uploaded yet.
+	 *
+	 * @since 2.1.0
+	 */
+	public function display_courses_placeholder() {
+		// Check permissions
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'saw-lms' ) );
+		}
+
+		?>
+		<div class="saw-admin-page">
+			
+			<div class="saw-page-header">
+				<div class="saw-page-title-wrapper">
+					<h1 class="saw-page-title">
+						<?php esc_html_e( 'Courses', 'saw-lms' ); ?>
+					</h1>
+					<p class="saw-page-subtitle">
+						<?php esc_html_e( 'Course management', 'saw-lms' ); ?>
+					</p>
+				</div>
+			</div>
+
+			<div class="saw-alert saw-alert-warning">
+				<span class="saw-alert-icon">⚠️</span>
+				<div class="saw-alert-content">
+					<p class="saw-alert-title"><?php esc_html_e( 'Course Post Type Not Available', 'saw-lms' ); ?></p>
+					<p class="saw-alert-message">
+						<?php 
+						esc_html_e( 'To enable course management, please upload the following files from Phase 2.1:', 'saw-lms' );
+						?>
+					</p>
+					<ul class="mt-3">
+						<li><code>/includes/post-types/class-course.php</code></li>
+						<li><code>/includes/post-types/class-section.php</code></li>
+						<li><code>/includes/post-types/class-lesson.php</code></li>
+						<li><code>/includes/post-types/class-quiz.php</code></li>
+					</ul>
+					<p class="mt-3">
+						<?php esc_html_e( 'After uploading these files, reload this page and the course management will be available.', 'saw-lms' ); ?>
+					</p>
+				</div>
+			</div>
+
+			<div class="saw-card">
+				<div class="saw-card-header">
+					<h2 class="saw-card-title">
+						<?php esc_html_e( '📚 What You Will Be Able To Do', 'saw-lms' ); ?>
+					</h2>
+				</div>
+				<div class="saw-card-body">
+					<ul class="saw-list">
+						<li class="saw-list-item">
+							<span class="dashicons dashicons-book-alt text-primary"></span>
+							<?php esc_html_e( 'Create and manage courses', 'saw-lms' ); ?>
+						</li>
+						<li class="saw-list-item">
+							<span class="dashicons dashicons-portfolio text-primary"></span>
+							<?php esc_html_e( 'Organize content into sections', 'saw-lms' ); ?>
+						</li>
+						<li class="saw-list-item">
+							<span class="dashicons dashicons-media-document text-primary"></span>
+							<?php esc_html_e( 'Add lessons with video, documents, and text', 'saw-lms' ); ?>
+						</li>
+						<li class="saw-list-item">
+							<span class="dashicons dashicons-welcome-learn-more text-primary"></span>
+							<?php esc_html_e( 'Create quizzes and assessments', 'saw-lms' ); ?>
+						</li>
+						<li class="saw-list-item">
+							<span class="dashicons dashicons-yes-alt text-primary"></span>
+							<?php esc_html_e( 'Track student progress and completion', 'saw-lms' ); ?>
+						</li>
+					</ul>
+				</div>
 			</div>
 
 		</div>
@@ -504,6 +698,8 @@ class SAW_LMS_Admin_Menu {
 			'saw_lms_course_completion_snapshots',
 			'saw_lms_course_schedules',
 			'saw_lms_document_snapshots',
+			'saw_lms_error_log',
+			'saw_lms_cache',
 		);
 
 		$result = array();

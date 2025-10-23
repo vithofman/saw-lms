@@ -7,11 +7,12 @@
  *
  * UPDATED in Phase 1.9: Added Admin Assets loader for new design system.
  * UPDATED in Phase 2.1: Added Custom Post Types initialization.
+ * FIXED: Added file_exists() checks before loading CPT files to prevent fatal errors.
  *
  * @package    SAW_LMS
  * @subpackage SAW_LMS/includes
  * @since      1.0.0
- * @version    2.1.0
+ * @version    2.1.1
  */
 
 // If this file is called directly, abort.
@@ -101,6 +102,7 @@ class SAW_LMS {
 	 * Constructor
 	 *
 	 * UPDATED in Phase 2.1: Added init_post_types() call.
+	 * FIXED: Moved init_post_types() AFTER error handling is set up.
 	 *
 	 * @since 1.0.0
 	 */
@@ -109,9 +111,9 @@ class SAW_LMS {
 		$this->version     = SAW_LMS_VERSION;
 
 		$this->load_dependencies();
-		$this->init_post_types();        // NEW in Phase 2.1
-		$this->setup_error_handling();
+		$this->setup_error_handling();  // ✅ FIRST: Setup error handling
 		$this->init_cache_system();
+		$this->init_post_types();       // ✅ THEN: Load CPTs (with error handling active)
 		$this->set_locale();
 		$this->define_admin_hooks();
 		$this->define_public_hooks();
@@ -160,16 +162,73 @@ class SAW_LMS {
 	 * Initialize Custom Post Types
 	 *
 	 * Loads and initializes all custom post type classes.
+	 * FIXED: Added file_exists() checks to prevent fatal errors.
 	 *
 	 * @since 2.1.0
+	 * @since 2.1.1 Added safety checks for file existence
 	 * @return void
 	 */
 	private function init_post_types() {
-		// Require CPT classes
-		require_once SAW_LMS_PLUGIN_DIR . 'includes/post-types/class-course.php';
-		require_once SAW_LMS_PLUGIN_DIR . 'includes/post-types/class-section.php';
-		require_once SAW_LMS_PLUGIN_DIR . 'includes/post-types/class-lesson.php';
-		require_once SAW_LMS_PLUGIN_DIR . 'includes/post-types/class-quiz.php';
+		// Define CPT files
+		$cpt_files = array(
+			'course'  => SAW_LMS_PLUGIN_DIR . 'includes/post-types/class-course.php',
+			'section' => SAW_LMS_PLUGIN_DIR . 'includes/post-types/class-section.php',
+			'lesson'  => SAW_LMS_PLUGIN_DIR . 'includes/post-types/class-lesson.php',
+			'quiz'    => SAW_LMS_PLUGIN_DIR . 'includes/post-types/class-quiz.php',
+		);
+
+		// Check if ALL CPT files exist before loading any
+		$all_files_exist = true;
+		$missing_files   = array();
+
+		foreach ( $cpt_files as $name => $file ) {
+			if ( ! file_exists( $file ) ) {
+				$all_files_exist = false;
+				$missing_files[] = $name;
+			}
+		}
+
+		// If any files are missing, log error and return
+		if ( ! $all_files_exist ) {
+			if ( $this->logger ) {
+				$this->logger->warning(
+					'CPT files missing - skipping post type registration',
+					array(
+						'missing_files' => $missing_files,
+						'note'          => 'This is normal if you have not yet uploaded Phase 2.1 files',
+					)
+				);
+			}
+
+			// Add admin notice for missing CPT files
+			add_action(
+				'admin_notices',
+				function() use ( $missing_files ) {
+					?>
+					<div class="notice notice-warning is-dismissible">
+						<p>
+							<strong>SAW LMS:</strong>
+							<?php
+							printf(
+								/* translators: %s: list of missing file names */
+								esc_html__( 'Custom Post Type files are missing: %s. Upload all files from Phase 2.1 to enable courses, sections, lessons, and quizzes.', 'saw-lms' ),
+								esc_html( implode( ', ', $missing_files ) )
+							);
+							?>
+						</p>
+					</div>
+					<?php
+				}
+			);
+
+			return; // Exit early - don't try to load CPTs
+		}
+
+		// All files exist - safe to load
+		require_once $cpt_files['course'];
+		require_once $cpt_files['section'];
+		require_once $cpt_files['lesson'];
+		require_once $cpt_files['quiz'];
 
 		// Initialize singletons
 		SAW_LMS_Course::init();
@@ -183,6 +242,11 @@ class SAW_LMS {
 		 * @since 2.1.0
 		 */
 		do_action( 'saw_lms_post_types_initialized' );
+
+		// Log successful initialization
+		if ( $this->logger ) {
+			$this->logger->info( 'Custom Post Types initialized successfully' );
+		}
 	}
 
 	/**
