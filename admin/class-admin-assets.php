@@ -8,7 +8,7 @@
  * @package    SAW_LMS
  * @subpackage SAW_LMS/admin
  * @since      1.0.0
- * @version    1.9.0
+ * @version    2.5.0
  */
 
 // If this file is called directly, abort.
@@ -61,6 +61,7 @@ class SAW_LMS_Admin_Assets {
 	 * 2. Utilities (utility třídy)
 	 * 3. Components (UI komponenty)
 	 * 4. Layouts (page layouts)
+	 * 5. Admin Menu (Phase 2.5)
 	 *
 	 * @since 1.0.0
 	 */
@@ -111,6 +112,15 @@ class SAW_LMS_Admin_Assets {
 				$this->plugin_name . '-admin-utilities',
 				$this->plugin_name . '-admin-components',
 			),
+			$this->version,
+			'all'
+		);
+
+		// 5. Admin Menu Styling (Phase 2.5)
+		wp_enqueue_style(
+			$this->plugin_name . '-admin-menu',
+			$assets_url . 'admin-menu.css',
+			array( $this->plugin_name . '-admin-variables' ),
 			$this->version,
 			'all'
 		);
