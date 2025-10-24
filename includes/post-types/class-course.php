@@ -5,11 +5,12 @@
  * Handles registration and functionality for the Course CPT.
  * REFACTORED in v3.1.0: Tabbed meta boxes using config files.
  * REFACTORED in v3.1.1: Difficulty as meta field instead of taxonomy.
+ * FIXED in v3.1.2: Added debugging for tabs configuration.
  *
  * @package     SAW_LMS
  * @subpackage  Post_Types
  * @since       2.1.0
- * @version     3.1.1
+ * @version     3.1.2
  */
 
 // Exit if accessed directly.
@@ -24,6 +25,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * meta boxes, admin columns, and course-specific functionality.
  *
  * UPDATED in v3.1.1: Difficulty is now a meta field, not taxonomy.
+ * FIXED in v3.1.2: Added debugging and validation for tabs config.
  *
  * @since 2.1.0
  */
@@ -102,32 +104,87 @@ class SAW_LMS_Course {
 	 *
 	 * Loads field configurations from config files.
 	 *
+	 * FIXED in v3.1.2: Added validation and error logging.
+	 *
 	 * @since 3.1.0
 	 * @return void
 	 */
 	private function load_tabs_config() {
 		$config_dir = SAW_LMS_PLUGIN_DIR . 'includes/post-types/configs/';
 
-		$this->tabs_config = array(
-			'settings' => array(
-				'label'  => __( 'Settings', 'saw-lms' ),
-				'fields' => file_exists( $config_dir . 'course-settings-fields.php' )
-					? include $config_dir . 'course-settings-fields.php'
-					: array(),
-			),
-			'builder' => array(
-				'label'  => __( 'Builder', 'saw-lms' ),
-				'fields' => file_exists( $config_dir . 'course-builder-fields.php' )
-					? include $config_dir . 'course-builder-fields.php'
-					: array(),
-			),
-			'stats' => array(
-				'label'  => __( 'Stats', 'saw-lms' ),
-				'fields' => file_exists( $config_dir . 'course-stats-fields.php' )
-					? include $config_dir . 'course-stats-fields.php'
-					: array(),
-			),
-		);
+		// Initialize tabs array.
+		$this->tabs_config = array();
+
+		// Load Settings tab.
+		$settings_file = $config_dir . 'course-settings-fields.php';
+		if ( file_exists( $settings_file ) ) {
+			$settings_fields = include $settings_file;
+			if ( is_array( $settings_fields ) && ! empty( $settings_fields ) ) {
+				$this->tabs_config['settings'] = array(
+					'label'  => __( 'Settings', 'saw-lms' ),
+					'fields' => $settings_fields,
+				);
+			} else {
+				// Log error if WP_DEBUG is enabled.
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log( 'SAW LMS: course-settings-fields.php returned invalid or empty array' );
+				}
+			}
+		} else {
+			// Log error if WP_DEBUG is enabled.
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( 'SAW LMS: course-settings-fields.php not found at ' . $settings_file );
+			}
+		}
+
+		// Load Builder tab.
+		$builder_file = $config_dir . 'course-builder-fields.php';
+		if ( file_exists( $builder_file ) ) {
+			$builder_fields = include $builder_file;
+			if ( is_array( $builder_fields ) && ! empty( $builder_fields ) ) {
+				$this->tabs_config['builder'] = array(
+					'label'  => __( 'Builder', 'saw-lms' ),
+					'fields' => $builder_fields,
+				);
+			} else {
+				// Log error if WP_DEBUG is enabled.
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log( 'SAW LMS: course-builder-fields.php returned invalid or empty array' );
+				}
+			}
+		} else {
+			// Log error if WP_DEBUG is enabled.
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( 'SAW LMS: course-builder-fields.php not found at ' . $builder_file );
+			}
+		}
+
+		// Load Stats tab.
+		$stats_file = $config_dir . 'course-stats-fields.php';
+		if ( file_exists( $stats_file ) ) {
+			$stats_fields = include $stats_file;
+			if ( is_array( $stats_fields ) && ! empty( $stats_fields ) ) {
+				$this->tabs_config['stats'] = array(
+					'label'  => __( 'Stats', 'saw-lms' ),
+					'fields' => $stats_fields,
+				);
+			} else {
+				// Log error if WP_DEBUG is enabled.
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log( 'SAW LMS: course-stats-fields.php returned invalid or empty array' );
+				}
+			}
+		} else {
+			// Log error if WP_DEBUG is enabled.
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( 'SAW LMS: course-stats-fields.php not found at ' . $stats_file );
+			}
+		}
+
+		// Final validation - if no tabs loaded, show admin notice.
+		if ( empty( $this->tabs_config ) && defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( 'SAW LMS CRITICAL: No tabs configuration loaded for Course CPT!' );
+		}
 	}
 
 	/**
@@ -247,21 +304,45 @@ class SAW_LMS_Course {
 	 * Render tabbed meta box
 	 *
 	 * UPDATED in v3.1.0: Uses Meta Box Helper for tabs.
+	 * FIXED in v3.1.2: Added debugging output when no tabs are loaded.
 	 *
 	 * @since 3.1.0
 	 * @param WP_Post $post Current post object.
 	 * @return void
 	 */
 	public function render_tabbed_meta_box( $post ) {
-		// Nonce for security.
-		wp_nonce_field( 'saw_lms_course_meta', 'saw_lms_course_nonce' );
+    // Nonce for security.
+    wp_nonce_field( 'saw_lms_course_meta', 'saw_lms_course_nonce' );
 
-		// Calculate stats for Stats tab.
-		$this->calculate_course_stats( $post->ID );
+    // Calculate stats for Stats tab.
+    $this->calculate_course_stats( $post->ID );
 
-		// Render tabs.
-		SAW_LMS_Meta_Box_Helper::render_tabbed_meta_box( $post->ID, $this->tabs_config );
-	}
+    // DEBUG: Show what's being passed to Helper
+    if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+        echo '<pre style="background: #f0f0f0; padding: 10px; margin: 10px 0; border: 1px solid #ccc;">';
+        echo 'TABS CONFIG DEBUG:' . "\n";
+        echo 'Number of tabs: ' . count( $this->tabs_config ) . "\n\n";
+        
+        foreach ( $this->tabs_config as $tab_id => $tab_config ) {
+            echo "Tab: {$tab_id}\n";
+            echo "Label: {$tab_config['label']}\n";
+            echo "Fields count: " . ( isset( $tab_config['fields'] ) ? count( $tab_config['fields'] ) : 0 ) . "\n";
+            
+            if ( 'settings' === $tab_id && isset( $tab_config['fields'] ) ) {
+                echo "First 3 field keys:\n";
+                $keys = array_keys( $tab_config['fields'] );
+                foreach ( array_slice( $keys, 0, 3 ) as $key ) {
+                    echo "  - {$key}\n";
+                }
+            }
+            echo "\n";
+        }
+        echo '</pre>';
+    }
+
+    // Render tabs.
+    SAW_LMS_Meta_Box_Helper::render_tabbed_meta_box( $post->ID, $this->tabs_config );
+}
 
 	/**
 	 * Calculate course statistics
@@ -275,7 +356,28 @@ class SAW_LMS_Course {
 	private function calculate_course_stats( $post_id ) {
 		global $wpdb;
 
+		// Check if enrollments table exists.
+		$table_name = $wpdb->prefix . 'saw_lms_enrollments';
+		
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$table_exists = $wpdb->get_var(
+			$wpdb->prepare(
+				'SHOW TABLES LIKE %s',
+				$table_name
+			)
+		);
+
+		if ( ! $table_exists ) {
+			// Table doesn't exist yet - set defaults.
+			update_post_meta( $post_id, '_saw_lms_total_enrollments', 0 );
+			update_post_meta( $post_id, '_saw_lms_active_enrollments', 0 );
+			update_post_meta( $post_id, '_saw_lms_completions', 0 );
+			update_post_meta( $post_id, '_saw_lms_completion_rate', '0%' );
+			return;
+		}
+
 		// Get enrollment counts.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$total_enrollments = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$wpdb->prefix}saw_lms_enrollments WHERE course_id = %d",
@@ -283,6 +385,7 @@ class SAW_LMS_Course {
 			)
 		);
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$active_enrollments = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$wpdb->prefix}saw_lms_enrollments WHERE course_id = %d AND status = 'active'",
@@ -290,6 +393,7 @@ class SAW_LMS_Course {
 			)
 		);
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$completions = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$wpdb->prefix}saw_lms_enrollments WHERE course_id = %d AND status = 'completed'",
@@ -345,7 +449,17 @@ class SAW_LMS_Course {
 				continue;
 			}
 
+			// Skip if no fields in tab.
+			if ( empty( $tab_config['fields'] ) || ! is_array( $tab_config['fields'] ) ) {
+				continue;
+			}
+
 			foreach ( $tab_config['fields'] as $key => $field ) {
+				// Skip fields that are not actual form fields (like 'heading').
+				if ( isset( $field['type'] ) && 'heading' === $field['type'] ) {
+					continue;
+				}
+
 				// Skip readonly fields.
 				if ( ! empty( $field['readonly'] ) ) {
 					continue;
@@ -362,7 +476,7 @@ class SAW_LMS_Course {
 					update_post_meta( $post_id, $key, $value );
 				} else {
 					// Checkbox unchecked = empty string.
-					if ( 'checkbox' === $field['type'] ) {
+					if ( isset( $field['type'] ) && 'checkbox' === $field['type'] ) {
 						update_post_meta( $post_id, $key, '' );
 					}
 				}
@@ -459,34 +573,55 @@ class SAW_LMS_Course {
 	}
 
 	/**
-	 * Enqueue admin assets
-	 *
-	 * @since 2.1.0
-	 * @param string $hook Current admin page hook.
-	 * @return void
-	 */
-	public function enqueue_admin_assets( $hook ) {
-		global $post_type;
+ * Enqueue admin assets
+ *
+ * FIXED in v3.1.2: Added tabs.css and tabs.js for tabbed meta boxes.
+ *
+ * @since 2.1.0
+ * @param string $hook Current admin page hook.
+ * @return void
+ */
+public function enqueue_admin_assets( $hook ) {
+	global $post_type;
 
-		if ( self::POST_TYPE !== $post_type ) {
-			return;
-		}
-
-		if ( 'post.php' === $hook || 'post-new.php' === $hook ) {
-			wp_enqueue_style(
-				'saw-lms-admin-components',
-				SAW_LMS_PLUGIN_URL . 'assets/css/admin/components.css',
-				array(),
-				SAW_LMS_VERSION
-			);
-
-			wp_enqueue_script(
-				'saw-lms-admin-utilities',
-				SAW_LMS_PLUGIN_URL . 'assets/js/admin/utilities.js',
-				array( 'jquery' ),
-				SAW_LMS_VERSION,
-				true
-			);
-		}
+	if ( self::POST_TYPE !== $post_type ) {
+		return;
 	}
+
+	if ( 'post.php' === $hook || 'post-new.php' === $hook ) {
+		// Components CSS (buttons, forms, etc.)
+		wp_enqueue_style(
+			'saw-lms-admin-components',
+			SAW_LMS_PLUGIN_URL . 'assets/css/admin/components.css',
+			array(),
+			SAW_LMS_VERSION
+		);
+
+		// Tabs CSS (NEW!)
+		wp_enqueue_style(
+			'saw-lms-admin-tabs',
+			SAW_LMS_PLUGIN_URL . 'assets/css/admin/tabs.css',
+			array( 'saw-lms-admin-components' ),
+			SAW_LMS_VERSION
+		);
+
+		// Utilities JS
+		wp_enqueue_script(
+			'saw-lms-admin-utilities',
+			SAW_LMS_PLUGIN_URL . 'assets/js/admin/utilities.js',
+			array( 'jquery' ),
+			SAW_LMS_VERSION,
+			true
+		);
+
+		// Tabs JS (NEW!)
+		wp_enqueue_script(
+			'saw-lms-admin-tabs',
+			SAW_LMS_PLUGIN_URL . 'assets/js/admin/tabs.js',
+			array( 'jquery' ),
+			SAW_LMS_VERSION,
+			true
+		);
+	}
+}
 }
