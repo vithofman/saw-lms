@@ -906,3 +906,118 @@
 	opacity: 1;
 	transform: translateX(-50%) translateY(0);
 }
+
+
+
+
+/* ==========================================================================
+   SAW TABS COMPONENT
+   ========================================================================== */
+
+.saw-tabs-wrapper {
+    margin: 0;
+    padding: 0;
+}
+
+.saw-tabs-nav {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid #c3c4c7;
+    margin: 0 0 20px 0;
+    padding: 0;
+    background: #f6f7f7;
+}
+
+.saw-tab-button {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 12px 20px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: #50575e;
+    transition: all 0.2s ease;
+    position: relative;
+    top: 1px;
+}
+
+.saw-tab-button:hover {
+    color: #2271b1;
+    background: #fff;
+}
+
+.saw-tab-button.saw-tab-active {
+    color: #2271b1;
+    background: #fff;
+    border-bottom-color: #2271b1;
+}
+
+.saw-tabs-content {
+    position: relative;
+    min-height: 200px;
+}
+
+.saw-tab-content {
+    display: none;
+    animation: sawFadeIn 0.3s ease;
+}
+
+.saw-tab-content.saw-tab-content-active {
+    display: block;
+}
+
+@keyframes sawFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Field Group Styling */
+.saw-field-group {
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #f0f0f1;
+}
+
+.saw-field-group:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.saw-field-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #1d2327;
+}
+
+.saw-field-label .required {
+    color: #d63638;
+}
+
+.saw-field-input {
+    margin-bottom: 6px;
+}
+
+.saw-field-description {
+    margin: 6px 0 0 0;
+    color: #646970;
+    font-size: 13px;
+    font-style: italic;
+}
+
+.saw-readonly-value {
+    padding: 10px 12px;
+    background: #f6f7f7;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+    color: #1d2327;
+    font-weight: 500;
+    font-size: 14px;
+}

@@ -578,3 +578,38 @@
 	});
 
 })();
+
+/**
+ * SAW Tabs Component
+ *
+ * Handles tab switching in admin meta boxes.
+ *
+ * @since 3.1.0
+ */
+SAW_LMS.tabs = {
+    /**
+     * Initialize tabs
+     */
+    init: function() {
+        jQuery(document).on('click', '.saw-tab-button', function(e) {
+            e.preventDefault();
+
+            var $button = jQuery(this);
+            var tabId = $button.data('tab');
+            var $wrapper = $button.closest('.saw-tabs-wrapper');
+
+            // Update button states
+            $wrapper.find('.saw-tab-button').removeClass('saw-tab-active');
+            $button.addClass('saw-tab-active');
+
+            // Update content visibility
+            $wrapper.find('.saw-tab-content').removeClass('saw-tab-content-active');
+            $wrapper.find('.saw-tab-content[data-tab-content="' + tabId + '"]').addClass('saw-tab-content-active');
+        });
+    }
+};
+
+// Initialize tabs on document ready
+jQuery(document).ready(function() {
+    SAW_LMS.tabs.init();
+});

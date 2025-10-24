@@ -3,11 +3,12 @@
  * Course Custom Post Type
  *
  * Handles registration and functionality for the Course CPT.
+ * REFACTORED in v3.1.0: Tabbed meta boxes using config files.
  *
  * @package     SAW_LMS
  * @subpackage  Post_Types
  * @since       2.1.0
- * @version     2.1.1
+ * @version     3.1.0
  */
 
 // Exit if accessed directly.
@@ -20,6 +21,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * Manages the Course custom post type including registration,
  * meta boxes, admin columns, and course-specific functionality.
+ *
+ * UPDATED in v3.1.0: Refactored to use tabbed meta boxes.
  *
  * @since 2.1.0
  */
@@ -40,6 +43,16 @@ class SAW_LMS_Course {
 	private static $instance = null;
 
 	/**
+	 * Tabs configuration
+	 *
+	 * Loaded from config files in includes/post-types/configs/
+	 *
+	 * @since 3.1.0
+	 * @var array
+	 */
+	private $tabs_config = array();
+
+	/**
 	 * Get singleton instance
 	 *
 	 * @return SAW_LMS_Course
@@ -56,14 +69,20 @@ class SAW_LMS_Course {
 	 *
 	 * Register hooks for the Course CPT.
 	 *
+	 * UPDATED in v3.1.0: Load tabs config.
+	 *
 	 * @since 2.1.0
 	 */
 	private function __construct() {
+		// Load tabs configuration.
+		$this->load_tabs_config();
+
 		// Register post type.
 		add_action( 'init', array( $this, 'register_post_type' ) );
 
 		// Register taxonomies.
 		add_action( 'init', array( $this, 'register_taxonomies' ) );
+		add_action( 'init', array( $this, 'register_default_difficulty_terms' ), 20 );
 
 		// Meta boxes.
 		add_action( 'add_meta_boxes', array( $this, 'add_meta_boxes' ) );
@@ -76,6 +95,39 @@ class SAW_LMS_Course {
 
 		// Admin styles.
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
+	}
+
+	/**
+	 * Load tabs configuration
+	 *
+	 * Loads field configurations from config files.
+	 *
+	 * @since 3.1.0
+	 * @return void
+	 */
+	private function load_tabs_config() {
+		$config_dir = SAW_LMS_PLUGIN_DIR . 'includes/post-types/configs/';
+
+		$this->tabs_config = array(
+			'content' => array(
+				'label'  => __( 'Content', 'saw-lms' ),
+				'fields' => file_exists( $config_dir . 'course-content-fields.php' )
+					? include $config_dir . 'course-content-fields.php'
+					: array(),
+			),
+			'settings' => array(
+				'label'  => __( 'Settings', 'saw-lms' ),
+				'fields' => file_exists( $config_dir . 'course-settings-fields.php' )
+					? include $config_dir . 'course-settings-fields.php'
+					: array(),
+			),
+			'stats' => array(
+				'label'  => __( 'Stats', 'saw-lms' ),
+				'fields' => file_exists( $config_dir . 'course-stats-fields.php' )
+					? include $config_dir . 'course-stats-fields.php'
+					: array(),
+			),
+		);
 	}
 
 	/**
@@ -104,29 +156,19 @@ class SAW_LMS_Course {
 			'search_items'          => __( 'Search Course', 'saw-lms' ),
 			'not_found'             => __( 'Not found', 'saw-lms' ),
 			'not_found_in_trash'    => __( 'Not found in Trash', 'saw-lms' ),
-			'featured_image'        => __( 'Course Image', 'saw-lms' ),
-			'set_featured_image'    => __( 'Set course image', 'saw-lms' ),
-			'remove_featured_image' => __( 'Remove course image', 'saw-lms' ),
-			'use_featured_image'    => __( 'Use as course image', 'saw-lms' ),
-			'insert_into_item'      => __( 'Insert into course', 'saw-lms' ),
-			'uploaded_to_this_item' => __( 'Uploaded to this course', 'saw-lms' ),
-			'items_list'            => __( 'Courses list', 'saw-lms' ),
-			'items_list_navigation' => __( 'Courses list navigation', 'saw-lms' ),
-			'filter_items_list'     => __( 'Filter courses list', 'saw-lms' ),
 		);
 
 		$args = array(
 			'label'               => __( 'Course', 'saw-lms' ),
 			'description'         => __( 'SAW LMS Courses', 'saw-lms' ),
 			'labels'              => $labels,
-			'supports'            => array( 'title', 'editor', 'thumbnail', 'excerpt', 'author' ),
-			'taxonomies'          => array( 'saw_course_category', 'saw_course_tag', 'saw_course_difficulty' ),
-			'hierarchical'        => false,
+			'supports'            => array( 'title', 'editor', 'thumbnail', 'page-attributes' ),
+			'hierarchical'        => true,
 			'public'              => true,
 			'show_ui'             => true,
 			'show_in_menu'        => 'saw-lms',
 			'menu_position'       => 25,
-			'menu_icon'           => 'dashicons-book-alt',
+			'menu_icon'           => 'dashicons-book',
 			'show_in_admin_bar'   => true,
 			'show_in_nav_menus'   => true,
 			'can_export'          => true,
@@ -137,10 +179,6 @@ class SAW_LMS_Course {
 			'map_meta_cap'        => true,
 			'show_in_rest'        => true,
 			'rest_base'           => 'courses',
-			'rewrite'             => array(
-				'slug'       => 'courses',
-				'with_front' => false,
-			),
 		);
 
 		register_post_type( self::POST_TYPE, $args );
@@ -153,7 +191,7 @@ class SAW_LMS_Course {
 	 * @return void
 	 */
 	public function register_taxonomies() {
-		// Course Categories.
+		// Course Category.
 		$category_labels = array(
 			'name'              => _x( 'Course Categories', 'taxonomy general name', 'saw-lms' ),
 			'singular_name'     => _x( 'Course Category', 'taxonomy singular name', 'saw-lms' ),
@@ -170,85 +208,44 @@ class SAW_LMS_Course {
 
 		register_taxonomy(
 			'saw_course_category',
-			array( self::POST_TYPE ),
+			self::POST_TYPE,
 			array(
 				'hierarchical'      => true,
 				'labels'            => $category_labels,
 				'show_ui'           => true,
 				'show_admin_column' => true,
 				'query_var'         => true,
-				'show_in_rest'      => true,
 				'rewrite'           => array( 'slug' => 'course-category' ),
-			)
-		);
-
-		// Course Tags.
-		$tag_labels = array(
-			'name'                       => _x( 'Course Tags', 'taxonomy general name', 'saw-lms' ),
-			'singular_name'              => _x( 'Course Tag', 'taxonomy singular name', 'saw-lms' ),
-			'search_items'               => __( 'Search Tags', 'saw-lms' ),
-			'popular_items'              => __( 'Popular Tags', 'saw-lms' ),
-			'all_items'                  => __( 'All Tags', 'saw-lms' ),
-			'edit_item'                  => __( 'Edit Tag', 'saw-lms' ),
-			'update_item'                => __( 'Update Tag', 'saw-lms' ),
-			'add_new_item'               => __( 'Add New Tag', 'saw-lms' ),
-			'new_item_name'              => __( 'New Tag Name', 'saw-lms' ),
-			'separate_items_with_commas' => __( 'Separate tags with commas', 'saw-lms' ),
-			'add_or_remove_items'        => __( 'Add or remove tags', 'saw-lms' ),
-			'choose_from_most_used'      => __( 'Choose from the most used tags', 'saw-lms' ),
-			'not_found'                  => __( 'No tags found.', 'saw-lms' ),
-			'menu_name'                  => __( 'Tags', 'saw-lms' ),
-		);
-
-		register_taxonomy(
-			'saw_course_tag',
-			array( self::POST_TYPE ),
-			array(
-				'hierarchical'      => false,
-				'labels'            => $tag_labels,
-				'show_ui'           => true,
-				'show_admin_column' => true,
-				'query_var'         => true,
 				'show_in_rest'      => true,
-				'rewrite'           => array( 'slug' => 'course-tag' ),
 			)
 		);
 
-		// Course Difficulty (NEW in v2.1.1).
+		// Course Difficulty.
 		$difficulty_labels = array(
-			'name'                       => _x( 'Course Difficulty', 'taxonomy general name', 'saw-lms' ),
-			'singular_name'              => _x( 'Difficulty Level', 'taxonomy singular name', 'saw-lms' ),
-			'search_items'               => __( 'Search Difficulty Levels', 'saw-lms' ),
-			'popular_items'              => __( 'Popular Difficulty Levels', 'saw-lms' ),
-			'all_items'                  => __( 'All Difficulty Levels', 'saw-lms' ),
-			'edit_item'                  => __( 'Edit Difficulty Level', 'saw-lms' ),
-			'update_item'                => __( 'Update Difficulty Level', 'saw-lms' ),
-			'add_new_item'               => __( 'Add New Difficulty Level', 'saw-lms' ),
-			'new_item_name'              => __( 'New Difficulty Level Name', 'saw-lms' ),
-			'separate_items_with_commas' => __( 'Separate difficulty levels with commas', 'saw-lms' ),
-			'add_or_remove_items'        => __( 'Add or remove difficulty levels', 'saw-lms' ),
-			'choose_from_most_used'      => __( 'Choose from the most used difficulty levels', 'saw-lms' ),
-			'not_found'                  => __( 'No difficulty levels found.', 'saw-lms' ),
-			'menu_name'                  => __( 'Difficulty', 'saw-lms' ),
+			'name'              => _x( 'Course Difficulties', 'taxonomy general name', 'saw-lms' ),
+			'singular_name'     => _x( 'Difficulty', 'taxonomy singular name', 'saw-lms' ),
+			'search_items'      => __( 'Search Difficulties', 'saw-lms' ),
+			'all_items'         => __( 'All Difficulties', 'saw-lms' ),
+			'edit_item'         => __( 'Edit Difficulty', 'saw-lms' ),
+			'update_item'       => __( 'Update Difficulty', 'saw-lms' ),
+			'add_new_item'      => __( 'Add New Difficulty', 'saw-lms' ),
+			'new_item_name'     => __( 'New Difficulty Name', 'saw-lms' ),
+			'menu_name'         => __( 'Difficulty', 'saw-lms' ),
 		);
 
 		register_taxonomy(
 			'saw_course_difficulty',
-			array( self::POST_TYPE ),
+			self::POST_TYPE,
 			array(
 				'hierarchical'      => false,
 				'labels'            => $difficulty_labels,
 				'show_ui'           => true,
 				'show_admin_column' => true,
 				'query_var'         => true,
+				'rewrite'           => array( 'slug' => 'difficulty' ),
 				'show_in_rest'      => true,
-				'rewrite'           => array( 'slug' => 'course-difficulty' ),
-				'meta_box_cb'       => false, // We'll use custom meta box for better UX.
 			)
 		);
-
-		// Register default difficulty terms after taxonomy registration.
-		add_action( 'init', array( $this, 'register_default_difficulty_terms' ), 20 );
 	}
 
 	/**
@@ -283,28 +280,20 @@ class SAW_LMS_Course {
 	/**
 	 * Add meta boxes
 	 *
+	 * REFACTORED in v3.1.0: Single tabbed meta box.
+	 *
 	 * @since 2.1.0
 	 * @return void
 	 */
 	public function add_meta_boxes() {
-		// Course Settings meta box.
+		// Main tabbed meta box.
 		add_meta_box(
-			'saw_lms_course_settings',
-			__( 'Course Settings', 'saw-lms' ),
-			array( $this, 'render_settings_meta_box' ),
+			'saw_lms_course_details',
+			__( 'Course Details', 'saw-lms' ),
+			array( $this, 'render_tabbed_meta_box' ),
 			self::POST_TYPE,
 			'normal',
 			'high'
-		);
-
-		// Course Stats meta box (read-only).
-		add_meta_box(
-			'saw_lms_course_stats',
-			__( 'Course Statistics', 'saw-lms' ),
-			array( $this, 'render_stats_meta_box' ),
-			self::POST_TYPE,
-			'side',
-			'default'
 		);
 
 		// Custom Difficulty meta box (replaces default taxonomy meta box).
@@ -319,336 +308,107 @@ class SAW_LMS_Course {
 	}
 
 	/**
-	 * Render Course Settings meta box
+	 * Render tabbed meta box
 	 *
-	 * @since 2.1.0
+	 * UPDATED in v3.1.0: Uses Meta Box Helper for tabs.
+	 *
+	 * @since 3.1.0
 	 * @param WP_Post $post Current post object.
 	 * @return void
 	 */
-	public function render_settings_meta_box( $post ) {
+	public function render_tabbed_meta_box( $post ) {
 		// Nonce for security.
-		wp_nonce_field( 'saw_lms_course_settings', 'saw_lms_course_settings_nonce' );
+		wp_nonce_field( 'saw_lms_course_meta', 'saw_lms_course_nonce' );
 
-		// Get current values.
-		$duration           = get_post_meta( $post->ID, '_saw_lms_duration', true );
-		$pass_percentage    = get_post_meta( $post->ID, '_saw_lms_pass_percentage', true );
-		$certificate_enable = get_post_meta( $post->ID, '_saw_lms_certificate_enable', true );
-		$points             = get_post_meta( $post->ID, '_saw_lms_points', true );
-		$repeatable         = get_post_meta( $post->ID, '_saw_lms_repeatable', true );
+		// Calculate stats for Stats tab.
+		$this->calculate_course_stats( $post->ID );
 
-		// Defaults.
-		$duration           = ! empty( $duration ) ? $duration : '';
-		$pass_percentage    = ! empty( $pass_percentage ) ? $pass_percentage : 70;
-		$certificate_enable = ! empty( $certificate_enable ) ? 1 : 0;
-		$points             = ! empty( $points ) ? $points : 0;
-		$repeatable         = ! empty( $repeatable ) ? 1 : 0;
+		// Render tabs.
+		SAW_LMS_Meta_Box_Helper::render_tabbed_meta_box( $post->ID, $this->tabs_config );
+	}
 
-		?>
-		<div class="saw-lms-meta-box">
-			<table class="form-table">
-				<tbody>
-					<!-- Duration -->
-					<tr>
-						<th scope="row">
-							<label for="saw_lms_duration"><?php esc_html_e( 'Course Duration (hours)', 'saw-lms' ); ?></label>
-						</th>
-						<td>
-							<input 
-								type="number" 
-								id="saw_lms_duration" 
-								name="saw_lms_duration" 
-								value="<?php echo esc_attr( $duration ); ?>" 
-								min="0" 
-								step="0.5" 
-								class="small-text"
-							/>
-							<p class="description"><?php esc_html_e( 'Estimated time to complete the course.', 'saw-lms' ); ?></p>
-						</td>
-					</tr>
+	/**
+	 * Calculate course statistics
+	 *
+	 * Updates readonly stats fields with real-time data.
+	 *
+	 * @since 3.1.0
+	 * @param int $post_id Post ID.
+	 * @return void
+	 */
+	private function calculate_course_stats( $post_id ) {
+		global $wpdb;
 
-					<!-- Pass Percentage -->
-					<tr>
-						<th scope="row">
-							<label for="saw_lms_pass_percentage"><?php esc_html_e( 'Passing Score (%)', 'saw-lms' ); ?></label>
-						</th>
-						<td>
-							<input 
-								type="number" 
-								id="saw_lms_pass_percentage" 
-								name="saw_lms_pass_percentage" 
-								value="<?php echo esc_attr( $pass_percentage ); ?>" 
-								min="0" 
-								max="100" 
-								step="1" 
-								class="small-text"
-							/>
-							<span>%</span>
-							<p class="description"><?php esc_html_e( 'Minimum score required to pass the course.', 'saw-lms' ); ?></p>
-						</td>
-					</tr>
+		// Get enrollment counts.
+		$total_enrollments = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->prefix}saw_lms_enrollments WHERE course_id = %d",
+				$post_id
+			)
+		);
 
-					<!-- Certificate -->
-					<tr>
-						<th scope="row">
-							<label for="saw_lms_certificate_enable"><?php esc_html_e( 'Certificate', 'saw-lms' ); ?></label>
-						</th>
-						<td>
-							<label>
-								<input 
-									type="checkbox" 
-									id="saw_lms_certificate_enable" 
-									name="saw_lms_certificate_enable" 
-									value="1" 
-									<?php checked( $certificate_enable, 1 ); ?>
-								/>
-								<?php esc_html_e( 'Enable certificate upon course completion', 'saw-lms' ); ?>
-							</label>
-						</td>
-					</tr>
+		$active_enrollments = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->prefix}saw_lms_enrollments WHERE course_id = %d AND status = 'active'",
+				$post_id
+			)
+		);
 
-					<!-- Points (Gamification) -->
-					<tr>
-						<th scope="row">
-							<label for="saw_lms_points"><?php esc_html_e( 'Points Reward', 'saw-lms' ); ?></label>
-						</th>
-						<td>
-							<input 
-								type="number" 
-								id="saw_lms_points" 
-								name="saw_lms_points" 
-								value="<?php echo esc_attr( $points ); ?>" 
-								min="0" 
-								step="1" 
-								class="small-text"
-							/>
-							<p class="description"><?php esc_html_e( 'Points awarded upon course completion (0 = disabled).', 'saw-lms' ); ?></p>
-						</td>
-					</tr>
+		$completions = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->prefix}saw_lms_enrollments WHERE course_id = %d AND status = 'completed'",
+				$post_id
+			)
+		);
 
-					<!-- Repeatable -->
-					<tr>
-						<th scope="row">
-							<label for="saw_lms_repeatable"><?php esc_html_e( 'Repeatable', 'saw-lms' ); ?></label>
-						</th>
-						<td>
-							<label>
-								<input 
-									type="checkbox" 
-									id="saw_lms_repeatable" 
-									name="saw_lms_repeatable" 
-									value="1" 
-									<?php checked( $repeatable, 1 ); ?>
-								/>
-								<?php esc_html_e( 'Allow users to retake this course after completion', 'saw-lms' ); ?>
-							</label>
-						</td>
-					</tr>
-				</tbody>
-			</table>
-		</div>
-		<?php
+		// Calculate completion rate.
+		$completion_rate = $total_enrollments > 0
+			? round( ( $completions / $total_enrollments ) * 100, 2 ) . '%'
+			: '0%';
+
+		// Update meta (for display purposes only).
+		update_post_meta( $post_id, '_saw_lms_total_enrollments', $total_enrollments );
+		update_post_meta( $post_id, '_saw_lms_active_enrollments', $active_enrollments );
+		update_post_meta( $post_id, '_saw_lms_completions', $completions );
+		update_post_meta( $post_id, '_saw_lms_completion_rate', $completion_rate );
 	}
 
 	/**
 	 * Render Course Difficulty meta box
 	 *
-	 * Custom radio-based difficulty selector for better UX.
-	 *
-	 * @since 2.1.1
+	 * @since 2.1.0
 	 * @param WP_Post $post Current post object.
 	 * @return void
 	 */
 	public function render_difficulty_meta_box( $post ) {
-		// Get difficulty terms.
-		$difficulty_terms = get_terms(
+		$terms = get_terms(
 			array(
 				'taxonomy'   => 'saw_course_difficulty',
 				'hide_empty' => false,
-				'orderby'    => 'slug',
-				'order'      => 'ASC',
 			)
 		);
 
-		// Get currently assigned difficulty.
-		$assigned_difficulties = wp_get_post_terms( $post->ID, 'saw_course_difficulty', array( 'fields' => 'ids' ) );
-		$current_difficulty    = ! empty( $assigned_difficulties ) ? $assigned_difficulties[0] : 0;
+		if ( ! is_wp_error( $terms ) && ! empty( $terms ) ) {
+			$current = wp_get_object_terms( $post->ID, 'saw_course_difficulty', array( 'fields' => 'ids' ) );
+			$current = ! empty( $current ) ? $current[0] : 0;
 
-		if ( empty( $difficulty_terms ) || is_wp_error( $difficulty_terms ) ) {
-			echo '<p>' . esc_html__( 'No difficulty levels available.', 'saw-lms' ) . '</p>';
-			return;
+			echo '<div class="saw-difficulty-select">';
+			foreach ( $terms as $term ) {
+				printf(
+					'<label class="form-radio"><input type="radio" name="saw_course_difficulty" value="%d"%s> <span>%s</span></label><br>',
+					esc_attr( $term->term_id ),
+					checked( $current, $term->term_id, false ),
+					esc_html( $term->name )
+				);
+			}
+			echo '</div>';
 		}
-
-		?>
-		<div class="saw-lms-difficulty-selector">
-			<style>
-				.saw-lms-difficulty-selector label {
-					display: block;
-					padding: 8px 12px;
-					margin: 5px 0;
-					border: 2px solid #ddd;
-					border-radius: 4px;
-					cursor: pointer;
-					transition: all 0.2s;
-				}
-				.saw-lms-difficulty-selector label:hover {
-					border-color: #667eea;
-					background: #f8f9fa;
-				}
-				.saw-lms-difficulty-selector input:checked + span {
-					font-weight: bold;
-					color: #667eea;
-				}
-				.saw-lms-difficulty-selector input {
-					margin-right: 8px;
-				}
-			</style>
-			<?php foreach ( $difficulty_terms as $term ) : ?>
-				<label>
-					<input 
-						type="radio" 
-						name="saw_course_difficulty" 
-						value="<?php echo absint( $term->term_id ); ?>" 
-						<?php checked( $current_difficulty, $term->term_id ); ?>
-					/>
-					<span><?php echo esc_html( $term->name ); ?></span>
-				</label>
-			<?php endforeach; ?>
-		</div>
-		<?php
-	}
-
-	/**
-	 * Render Course Statistics meta box
-	 *
-	 * @since 2.1.0
-	 * @param WP_Post $post Current post object.
-	 * @return void
-	 */
-	public function render_stats_meta_box( $post ) {
-		// Get course stats (cached).
-		$stats = $this->get_course_stats( $post->ID );
-
-		?>
-		<div class="saw-lms-stats-box">
-			<style>
-				.saw-lms-stats-box .stat-row {
-					display: flex;
-					justify-content: space-between;
-					padding: 8px 0;
-					border-bottom: 1px solid #eee;
-				}
-				.saw-lms-stats-box .stat-row:last-child {
-					border-bottom: none;
-				}
-				.saw-lms-stats-box .stat-label {
-					color: #666;
-				}
-				.saw-lms-stats-box .stat-value {
-					font-weight: bold;
-					color: #2c3e50;
-				}
-			</style>
-
-			<div class="stat-row">
-				<span class="stat-label"><?php esc_html_e( 'Total Enrollments:', 'saw-lms' ); ?></span>
-				<span class="stat-value"><?php echo absint( $stats['enrollments'] ); ?></span>
-			</div>
-
-			<div class="stat-row">
-				<span class="stat-label"><?php esc_html_e( 'In Progress:', 'saw-lms' ); ?></span>
-				<span class="stat-value"><?php echo absint( $stats['in_progress'] ); ?></span>
-			</div>
-
-			<div class="stat-row">
-				<span class="stat-label"><?php esc_html_e( 'Completed:', 'saw-lms' ); ?></span>
-				<span class="stat-value"><?php echo absint( $stats['completed'] ); ?></span>
-			</div>
-
-			<div class="stat-row">
-				<span class="stat-label"><?php esc_html_e( 'Completion Rate:', 'saw-lms' ); ?></span>
-				<span class="stat-value"><?php echo esc_html( $stats['completion_rate'] ); ?>%</span>
-			</div>
-
-			<div class="stat-row">
-				<span class="stat-label"><?php esc_html_e( 'Average Score:', 'saw-lms' ); ?></span>
-				<span class="stat-value"><?php echo esc_html( $stats['average_score'] ); ?>%</span>
-			</div>
-
-			<p style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; color: #999; font-size: 12px;">
-				<?php esc_html_e( 'Statistics are cached and updated every 5 minutes.', 'saw-lms' ); ?>
-			</p>
-		</div>
-		<?php
-	}
-
-	/**
-	 * Get course statistics (cached)
-	 *
-	 * @since 2.1.0
-	 * @param int $course_id Course post ID.
-	 * @return array Course statistics.
-	 */
-	private function get_course_stats( $course_id ) {
-		global $wpdb;
-
-		$cache_key = 'course_stats_' . $course_id;
-		$stats     = wp_cache_get( $cache_key, 'saw_lms_courses' );
-
-		if ( false === $stats ) {
-			// Get enrollment counts.
-			$enrollments = $wpdb->get_var(
-				$wpdb->prepare(
-					"SELECT COUNT(*) FROM {$wpdb->prefix}saw_lms_enrollments WHERE course_id = %d",
-					$course_id
-				)
-			);
-			$enrollments = $enrollments ? absint( $enrollments ) : 0;
-
-			$completed = $wpdb->get_var(
-				$wpdb->prepare(
-					"SELECT COUNT(*) FROM {$wpdb->prefix}saw_lms_enrollments WHERE course_id = %d AND status = 'completed'",
-					$course_id
-				)
-			);
-			$completed = $completed ? absint( $completed ) : 0;
-
-			$in_progress = $wpdb->get_var(
-				$wpdb->prepare(
-					"SELECT COUNT(*) FROM {$wpdb->prefix}saw_lms_enrollments WHERE course_id = %d AND status = 'in_progress'",
-					$course_id
-				)
-			);
-			$in_progress = $in_progress ? absint( $in_progress ) : 0;
-
-			// Calculate completion rate.
-			$completion_rate = $enrollments > 0 ? round( ( $completed / $enrollments ) * 100, 1 ) : 0;
-
-			// Get average score.
-			$average_score = $wpdb->get_var(
-				$wpdb->prepare(
-					"SELECT AVG(final_score) FROM {$wpdb->prefix}saw_lms_enrollments WHERE course_id = %d AND status = 'completed'",
-					$course_id
-				)
-			);
-			$average_score = $average_score ? round( $average_score, 1 ) : 0;
-
-			$stats = array(
-				'enrollments'     => absint( $enrollments ),
-				'completed'       => absint( $completed ),
-				'in_progress'     => absint( $in_progress ),
-				'completion_rate' => $completion_rate,
-				'average_score'   => $average_score,
-			);
-
-			// Cache for 5 minutes (will be invalidated on enrollment changes).
-			wp_cache_set( $cache_key, $stats, 'saw_lms_courses', 300 );
-		}
-
-		return $stats;
 	}
 
 	/**
 	 * Save meta box data
+	 *
+	 * REFACTORED in v3.1.0: Universal save method with sanitization.
 	 *
 	 * @since 2.1.0
 	 * @param int     $post_id Post ID.
@@ -657,11 +417,11 @@ class SAW_LMS_Course {
 	 */
 	public function save_meta_boxes( $post_id, $post ) {
 		// Security checks.
-		if ( ! isset( $_POST['saw_lms_course_settings_nonce'] ) ) {
+		if ( ! isset( $_POST['saw_lms_course_nonce'] ) ) {
 			return;
 		}
 
-		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['saw_lms_course_settings_nonce'] ) ), 'saw_lms_course_settings' ) ) {
+		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['saw_lms_course_nonce'] ) ), 'saw_lms_course_meta' ) ) {
 			return;
 		}
 
@@ -673,46 +433,45 @@ class SAW_LMS_Course {
 			return;
 		}
 
-		// Sanitize and save duration.
-		if ( isset( $_POST['saw_lms_duration'] ) ) {
-			$duration = floatval( $_POST['saw_lms_duration'] );
-			update_post_meta( $post_id, '_saw_lms_duration', $duration );
-		}
+		// Loop through all tabs and save fields.
+		foreach ( $this->tabs_config as $tab_id => $tab_config ) {
+			// Skip Stats tab (read-only).
+			if ( 'stats' === $tab_id ) {
+				continue;
+			}
 
-		// Sanitize and save pass percentage.
-		if ( isset( $_POST['saw_lms_pass_percentage'] ) ) {
-			$pass_percentage = absint( $_POST['saw_lms_pass_percentage'] );
-			$pass_percentage = max( 0, min( 100, $pass_percentage ) ); // Clamp 0-100.
-			update_post_meta( $post_id, '_saw_lms_pass_percentage', $pass_percentage );
-		}
+			foreach ( $tab_config['fields'] as $key => $field ) {
+				// Skip readonly fields.
+				if ( ! empty( $field['readonly'] ) ) {
+					continue;
+				}
 
-		// Save certificate enable.
-		$certificate_enable = isset( $_POST['saw_lms_certificate_enable'] ) ? 1 : 0;
-		update_post_meta( $post_id, '_saw_lms_certificate_enable', $certificate_enable );
+				// Handle field value.
+				if ( isset( $_POST[ $key ] ) ) {
+					// Sanitize value based on field type.
+					$value = SAW_LMS_Meta_Box_Helper::sanitize_value(
+						wp_unslash( $_POST[ $key ] ),
+						$field['type']
+					);
 
-		// Sanitize and save points.
-		if ( isset( $_POST['saw_lms_points'] ) ) {
-			$points = absint( $_POST['saw_lms_points'] );
-			update_post_meta( $post_id, '_saw_lms_points', $points );
-		}
-
-		// Save repeatable.
-		$repeatable = isset( $_POST['saw_lms_repeatable'] ) ? 1 : 0;
-		update_post_meta( $post_id, '_saw_lms_repeatable', $repeatable );
-
-		// Save difficulty taxonomy (NEW in v2.1.1).
-		if ( isset( $_POST['saw_course_difficulty'] ) ) {
-			$difficulty_term_id = absint( $_POST['saw_course_difficulty'] );
-			if ( $difficulty_term_id > 0 ) {
-				wp_set_post_terms( $post_id, array( $difficulty_term_id ), 'saw_course_difficulty', false );
-			} else {
-				// Remove difficulty if none selected.
-				wp_set_post_terms( $post_id, array(), 'saw_course_difficulty', false );
+					update_post_meta( $post_id, $key, $value );
+				} else {
+					// Checkbox unchecked = empty string.
+					if ( 'checkbox' === $field['type'] ) {
+						update_post_meta( $post_id, $key, '' );
+					}
+				}
 			}
 		}
 
-		// Invalidate course stats cache.
-		wp_cache_delete( 'course_stats_' . $post_id, 'saw_lms_courses' );
+		// Save difficulty taxonomy.
+		if ( isset( $_POST['saw_course_difficulty'] ) ) {
+			$term_id = absint( $_POST['saw_course_difficulty'] );
+			wp_set_object_terms( $post_id, $term_id, 'saw_course_difficulty', false );
+		}
+
+		// Invalidate course cache.
+		wp_cache_delete( 'course_' . $post_id, 'saw_lms_courses' );
 
 		/**
 		 * Fires after course meta is saved.
@@ -732,24 +491,23 @@ class SAW_LMS_Course {
 	 * @return array Modified columns.
 	 */
 	public function add_admin_columns( $columns ) {
-		// Remove date column temporarily.
-		$date = $columns['date'];
-		unset( $columns['date'] );
+		$new_columns = array();
 
-		// Add custom columns.
-		$columns['difficulty']   = __( 'Difficulty', 'saw-lms' );
-		$columns['duration']     = __( 'Duration', 'saw-lms' );
-		$columns['enrollments']  = __( 'Enrollments', 'saw-lms' );
-		$columns['completion']   = __( 'Completion', 'saw-lms' );
+		foreach ( $columns as $key => $value ) {
+			$new_columns[ $key ] = $value;
 
-		// Re-add date column at the end.
-		$columns['date'] = $date;
+			if ( 'title' === $key ) {
+				$new_columns['saw_difficulty']   = __( 'Difficulty', 'saw-lms' );
+				$new_columns['saw_duration']     = __( 'Duration', 'saw-lms' );
+				$new_columns['saw_enrollments']  = __( 'Enrollments', 'saw-lms' );
+			}
+		}
 
-		return $columns;
+		return $new_columns;
 	}
 
 	/**
-	 * Render admin column content
+	 * Render admin columns
 	 *
 	 * @since 2.1.0
 	 * @param string $column  Column name.
@@ -758,38 +516,23 @@ class SAW_LMS_Course {
 	 */
 	public function render_admin_columns( $column, $post_id ) {
 		switch ( $column ) {
-			case 'difficulty':
-				$difficulties = wp_get_post_terms( $post_id, 'saw_course_difficulty' );
-				if ( ! empty( $difficulties ) && ! is_wp_error( $difficulties ) ) {
-					$difficulty = $difficulties[0];
-					echo '<span class="saw-lms-difficulty saw-lms-difficulty-' . esc_attr( $difficulty->slug ) . '">';
-					echo esc_html( $difficulty->name );
-					echo '</span>';
+			case 'saw_difficulty':
+				$terms = get_the_terms( $post_id, 'saw_course_difficulty' );
+				if ( ! empty( $terms ) && ! is_wp_error( $terms ) ) {
+					echo esc_html( $terms[0]->name );
 				} else {
 					echo '—';
 				}
 				break;
 
-			case 'duration':
+			case 'saw_duration':
 				$duration = get_post_meta( $post_id, '_saw_lms_duration', true );
-				if ( ! empty( $duration ) ) {
-					/* translators: %s: duration in hours */
-					printf( esc_html__( '%s hours', 'saw-lms' ), esc_html( $duration ) );
-				} else {
-					echo '—';
-				}
+				echo $duration ? esc_html( $duration . ' hours' ) : '—';
 				break;
 
-			case 'enrollments':
-				$stats = $this->get_course_stats( $post_id );
-				echo '<strong>' . absint( $stats['enrollments'] ) . '</strong>';
-				break;
-
-			case 'completion':
-				$stats = $this->get_course_stats( $post_id );
-				echo '<span title="' . esc_attr( $stats['completed'] . ' / ' . $stats['enrollments'] ) . '">';
-				echo esc_html( $stats['completion_rate'] ) . '%';
-				echo '</span>';
+			case 'saw_enrollments':
+				$enrollments = get_post_meta( $post_id, '_saw_lms_total_enrollments', true );
+				echo $enrollments ? esc_html( $enrollments ) : '0';
 				break;
 		}
 	}
@@ -799,10 +542,12 @@ class SAW_LMS_Course {
 	 *
 	 * @since 2.1.0
 	 * @param array $columns Sortable columns.
-	 * @return array Modified sortable columns.
+	 * @return array Modified columns.
 	 */
 	public function sortable_columns( $columns ) {
-		$columns['duration'] = 'duration';
+		$columns['saw_duration']    = 'saw_duration';
+		$columns['saw_enrollments'] = 'saw_enrollments';
+
 		return $columns;
 	}
 
@@ -814,73 +559,27 @@ class SAW_LMS_Course {
 	 * @return void
 	 */
 	public function enqueue_admin_assets( $hook ) {
-		// Only on course edit screen.
-		if ( 'post.php' !== $hook && 'post-new.php' !== $hook ) {
+		global $post_type;
+
+		if ( self::POST_TYPE !== $post_type ) {
 			return;
 		}
 
-		$screen = get_current_screen();
-		if ( ! $screen || self::POST_TYPE !== $screen->post_type ) {
-			return;
+		if ( 'post.php' === $hook || 'post-new.php' === $hook ) {
+			wp_enqueue_style(
+				'saw-lms-admin-components',
+				SAW_LMS_PLUGIN_URL . 'assets/css/admin/components.css',
+				array(),
+				SAW_LMS_VERSION
+			);
+
+			wp_enqueue_script(
+				'saw-lms-admin-utilities',
+				SAW_LMS_PLUGIN_URL . 'assets/js/admin/utilities.js',
+				array( 'jquery' ),
+				SAW_LMS_VERSION,
+				true
+			);
 		}
-
-		// Enqueue admin styles (will be created in next steps).
-		wp_enqueue_style(
-			'saw-lms-course-admin',
-			SAW_LMS_PLUGIN_URL . 'assets/css/admin/course.css',
-			array(),
-			SAW_LMS_VERSION
-		);
-
-		// Enqueue admin scripts (will be created in next steps).
-		wp_enqueue_script(
-			'saw-lms-course-admin',
-			SAW_LMS_PLUGIN_URL . 'assets/js/admin/course.js',
-			array( 'jquery' ),
-			SAW_LMS_VERSION,
-			true
-		);
-
-		// Localize script data.
-		wp_localize_script(
-			'saw-lms-course-admin',
-			'sawLmsCourse',
-			array(
-				'postId' => get_the_ID(),
-				'nonce'  => wp_create_nonce( 'saw_lms_course_admin' ),
-				'i18n'   => array(
-					'error'   => __( 'An error occurred. Please try again.', 'saw-lms' ),
-					'success' => __( 'Settings saved successfully.', 'saw-lms' ),
-				),
-			)
-		);
-	}
-
-	/**
-	 * Get course by ID (helper method)
-	 *
-	 * @since 2.1.0
-	 * @param int $course_id Course post ID.
-	 * @return WP_Post|null Course post object or null.
-	 */
-	public static function get_course( $course_id ) {
-		$course = get_post( $course_id );
-
-		if ( ! $course || self::POST_TYPE !== $course->post_type ) {
-			return null;
-		}
-
-		return $course;
-	}
-
-	/**
-	 * Check if course exists
-	 *
-	 * @since 2.1.0
-	 * @param int $course_id Course post ID.
-	 * @return bool True if course exists, false otherwise.
-	 */
-	public static function course_exists( $course_id ) {
-		return null !== self::get_course( $course_id );
 	}
 }
