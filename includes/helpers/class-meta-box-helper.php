@@ -7,11 +7,12 @@
  * UPDATED in v3.1.1: Added support for 'heading' and 'date' field types.
  * FIXED in v3.1.5: COMPLETED render_field() - all field types now render properly!
  * UPDATED in v3.2.4: Added render_sub_tabbed_content() for vertical sub-tabs support.
+ * FIXED in v3.2.5: Fixed data attribute mismatch - data-panel-id → data-panel-content
  *
  * @package     SAW_LMS
  * @subpackage  Helpers
  * @since       3.0.0
- * @version     3.2.4
+ * @version     3.2.5
  */
 
 // Exit if accessed directly.
@@ -125,6 +126,8 @@ class SAW_LMS_Meta_Box_Helper {
 	 *
 	 * Renders vertical sub-tabs menu with panels for Settings tab.
 	 *
+	 * FIXED in v3.2.5: Changed data-panel-id to data-panel-content to match JavaScript.
+	 *
 	 * @since 3.2.4
 	 * @param int   $post_id  Post ID.
 	 * @param array $sub_tabs Array of sub-tabs configuration.
@@ -185,8 +188,9 @@ class SAW_LMS_Meta_Box_Helper {
 		foreach ( $sub_tabs as $sub_tab_id => $sub_tab_config ) {
 			$active_class = $first ? ' saw-sub-tab-panel-active' : '';
 
+			// ✅ OPRAVENO: data-panel-id → data-panel-content
 			printf(
-				'<div class="saw-sub-tab-panel%s" data-panel-id="%s">',
+				'<div class="saw-sub-tab-panel%s" data-panel-content="%s">',
 				esc_attr( $active_class ),
 				esc_attr( $sub_tab_id )
 			);
