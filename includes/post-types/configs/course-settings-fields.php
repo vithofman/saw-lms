@@ -3,6 +3,7 @@
  * Course Settings Tab Fields Configuration
  *
  * Defines fields for the "Settings" tab in Course meta box.
+ * UPDATED v3.1.0: Added difficulty field from sidebar.
  *
  * @package     SAW_LMS
  * @subpackage  Post_Types/Configs
@@ -59,5 +60,19 @@ return array(
 		'description' => __( 'Number of days before the course can be retaken (0 = no limit).', 'saw-lms' ),
 		'placeholder' => '0',
 		'default'     => 0,
+	),
+
+	'_saw_lms_difficulty' => array(
+		'type'        => 'select',
+		'label'       => __( 'Course Difficulty', 'saw-lms' ),
+		'description' => __( 'Select the difficulty level for this course.', 'saw-lms' ),
+		'options'     => array(
+			''             => __( '— Select Difficulty —', 'saw-lms' ),
+			'beginner'     => __( 'Beginner', 'saw-lms' ),
+			'intermediate' => __( 'Intermediate', 'saw-lms' ),
+			'advanced'     => __( 'Advanced', 'saw-lms' ),
+			'expert'       => __( 'Expert', 'saw-lms' ),
+		),
+		'default'     => '',
 	),
 );

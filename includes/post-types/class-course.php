@@ -109,16 +109,16 @@ class SAW_LMS_Course {
 		$config_dir = SAW_LMS_PLUGIN_DIR . 'includes/post-types/configs/';
 
 		$this->tabs_config = array(
-			'content' => array(
-				'label'  => __( 'Content', 'saw-lms' ),
-				'fields' => file_exists( $config_dir . 'course-content-fields.php' )
-					? include $config_dir . 'course-content-fields.php'
-					: array(),
-			),
 			'settings' => array(
 				'label'  => __( 'Settings', 'saw-lms' ),
 				'fields' => file_exists( $config_dir . 'course-settings-fields.php' )
 					? include $config_dir . 'course-settings-fields.php'
+					: array(),
+			),
+			'builder' => array(
+				'label'  => __( 'Builder', 'saw-lms' ),
+				'fields' => file_exists( $config_dir . 'course-builder-fields.php' )
+					? include $config_dir . 'course-builder-fields.php'
 					: array(),
 			),
 			'stats' => array(
@@ -220,7 +220,7 @@ class SAW_LMS_Course {
 			)
 		);
 
-		// Course Difficulty.
+		// Course Difficulty (keeping taxonomy but hiding default meta box).
 		$difficulty_labels = array(
 			'name'              => _x( 'Course Difficulties', 'taxonomy general name', 'saw-lms' ),
 			'singular_name'     => _x( 'Difficulty', 'taxonomy singular name', 'saw-lms' ),
@@ -244,6 +244,7 @@ class SAW_LMS_Course {
 				'query_var'         => true,
 				'rewrite'           => array( 'slug' => 'difficulty' ),
 				'show_in_rest'      => true,
+				'meta_box_cb'       => false, // Hide default meta box - we handle it in tabs.
 			)
 		);
 	}
@@ -294,16 +295,6 @@ class SAW_LMS_Course {
 			self::POST_TYPE,
 			'normal',
 			'high'
-		);
-
-		// Custom Difficulty meta box (replaces default taxonomy meta box).
-		add_meta_box(
-			'saw_lms_course_difficulty',
-			__( 'Course Difficulty', 'saw-lms' ),
-			array( $this, 'render_difficulty_meta_box' ),
-			self::POST_TYPE,
-			'side',
-			'default'
 		);
 	}
 
@@ -374,38 +365,6 @@ class SAW_LMS_Course {
 	}
 
 	/**
-	 * Render Course Difficulty meta box
-	 *
-	 * @since 2.1.0
-	 * @param WP_Post $post Current post object.
-	 * @return void
-	 */
-	public function render_difficulty_meta_box( $post ) {
-		$terms = get_terms(
-			array(
-				'taxonomy'   => 'saw_course_difficulty',
-				'hide_empty' => false,
-			)
-		);
-
-		if ( ! is_wp_error( $terms ) && ! empty( $terms ) ) {
-			$current = wp_get_object_terms( $post->ID, 'saw_course_difficulty', array( 'fields' => 'ids' ) );
-			$current = ! empty( $current ) ? $current[0] : 0;
-
-			echo '<div class="saw-difficulty-select">';
-			foreach ( $terms as $term ) {
-				printf(
-					'<label class="form-radio"><input type="radio" name="saw_course_difficulty" value="%d"%s> <span>%s</span></label><br>',
-					esc_attr( $term->term_id ),
-					checked( $current, $term->term_id, false ),
-					esc_html( $term->name )
-				);
-			}
-			echo '</div>';
-		}
-	}
-
-	/**
 	 * Save meta box data
 	 *
 	 * REFACTORED in v3.1.0: Universal save method with sanitization.
@@ -446,6 +405,24 @@ class SAW_LMS_Course {
 					continue;
 				}
 
+				// Handle difficulty field specially (taxonomy).
+				if ( '_saw_lms_difficulty' === $key ) {
+					if ( isset( $_POST[ $key ] ) ) {
+						$difficulty_slug = sanitize_text_field( wp_unslash( $_POST[ $key ] ) );
+						if ( ! empty( $difficulty_slug ) ) {
+							// Get term by slug.
+							$term = get_term_by( 'slug', $difficulty_slug, 'saw_course_difficulty' );
+							if ( $term ) {
+								wp_set_object_terms( $post_id, $term->term_id, 'saw_course_difficulty', false );
+							}
+						} else {
+							// Clear difficulty.
+							wp_set_object_terms( $post_id, array(), 'saw_course_difficulty', false );
+						}
+					}
+					continue;
+				}
+
 				// Handle field value.
 				if ( isset( $_POST[ $key ] ) ) {
 					// Sanitize value based on field type.
@@ -462,12 +439,6 @@ class SAW_LMS_Course {
 					}
 				}
 			}
-		}
-
-		// Save difficulty taxonomy.
-		if ( isset( $_POST['saw_course_difficulty'] ) ) {
-			$term_id = absint( $_POST['saw_course_difficulty'] );
-			wp_set_object_terms( $post_id, $term_id, 'saw_course_difficulty', false );
 		}
 
 		// Invalidate course cache.

@@ -613,3 +613,32 @@ SAW_LMS.tabs = {
 jQuery(document).ready(function() {
     SAW_LMS.tabs.init();
 });
+
+javascript/**
+ * SAW Tabs Component
+ *
+ * Handles tab switching in admin meta boxes.
+ *
+ * @since 3.1.0
+ */
+jQuery(document).ready(function($) {
+    // Initialize tabs for meta boxes
+    $('.saw-tabs-wrapper').each(function() {
+        var $wrapper = $(this);
+        
+        $wrapper.find('.saw-tab-button').on('click', function(e) {
+            e.preventDefault();
+            
+            var $button = $(this);
+            var tabId = $button.data('tab');
+            
+            // Update button states
+            $wrapper.find('.saw-tab-button').removeClass('saw-tab-active');
+            $button.addClass('saw-tab-active');
+            
+            // Update content visibility
+            $wrapper.find('.saw-tab-content').removeClass('saw-tab-content-active');
+            $wrapper.find('.saw-tab-content[data-tab-content="' + tabId + '"]').addClass('saw-tab-content-active');
+        });
+    });
+});

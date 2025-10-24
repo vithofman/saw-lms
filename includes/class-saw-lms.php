@@ -7,13 +7,14 @@
  *
  * UPDATED in Phase 1.9: Added Admin Assets loader for new design system.
  * UPDATED in Phase 2.1: Added Custom Post Types initialization.
+ * UPDATED in Phase 3.1: Added Meta Box Helper loader.
  * FIXED: Added file_exists() checks before loading CPT files to prevent fatal errors.
  * FIXED v0.1.1: Error handling moved to 'init' hook to prevent wp_mail() error.
  *
  * @package    SAW_LMS
  * @subpackage SAW_LMS/includes
  * @since      1.0.0
- * @version    0.1.1
+ * @version    3.1.0
  */
 
 // If this file is called directly, abort.
@@ -125,6 +126,7 @@ class SAW_LMS {
 	 * Load the required dependencies
 	 *
 	 * UPDATED in Phase 1.9: Added Admin Assets loader.
+	 * UPDATED in Phase 3.1: Added Meta Box Helper loader.
 	 *
 	 * @since 1.0.0
 	 */
@@ -146,6 +148,11 @@ class SAW_LMS {
 		require_once SAW_LMS_PLUGIN_DIR . 'includes/cache/drivers/class-transient-driver.php';
 		require_once SAW_LMS_PLUGIN_DIR . 'includes/cache/class-cache-manager.php';
 		require_once SAW_LMS_PLUGIN_DIR . 'includes/cache/class-cache-helper.php';
+
+		/**
+		 * Helpers
+		 */
+		require_once SAW_LMS_PLUGIN_DIR . 'includes/helpers/class-meta-box-helper.php';
 
 		/**
 		 * Admin classes
