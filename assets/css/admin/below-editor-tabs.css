@@ -1,0 +1,252 @@
+/**
+ * Below Editor Tabs Styles
+ *
+ * Styles for tabs rendered below Gutenberg editor using edit_form_after_editor hook.
+ * This replaces the old meta box approach which caused split-screen layout issues.
+ *
+ * @package    SAW_LMS
+ * @subpackage Assets/CSS/Admin
+ * @since      3.2.7
+ * @version    3.2.7
+ */
+
+/* ============================================
+   MAIN WRAPPER - POSITIONED BELOW EDITOR
+   ============================================ */
+
+.saw-below-editor-tabs-wrapper {
+	margin: 20px 0 0 0 !important;
+	background: #fff !important;
+	border: 1px solid #c3c4c7 !important;
+	border-radius: 4px !important;
+	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04) !important;
+	/* Clear floats from Gutenberg */
+	clear: both !important;
+	/* Full width - no positioning needed */
+	width: 100% !important;
+	box-sizing: border-box !important;
+}
+
+/* ============================================
+   TAB NAVIGATION - REUSE EXISTING STYLES
+   ============================================ */
+
+.saw-below-editor-tabs-wrapper .saw-tabs-nav {
+	/* Inherited from tabs.css */
+	display: flex !important;
+	background: #f0f0f1 !important;
+	border-bottom: 1px solid #c3c4c7 !important;
+	padding: 0 !important;
+	margin: 0 !important;
+}
+
+.saw-below-editor-tabs-wrapper .saw-tab-button {
+	/* Inherited from tabs.css */
+	flex: 0 0 auto !important;
+	padding: 12px 24px !important;
+	background: transparent !important;
+	border: none !important;
+	border-bottom: 3px solid transparent !important;
+	cursor: pointer !important;
+	font-size: 14px !important;
+	font-weight: 500 !important;
+	color: #50575e !important;
+	transition: all 0.2s ease !important;
+}
+
+.saw-below-editor-tabs-wrapper .saw-tab-button:hover {
+	background: rgba(0, 0, 0, 0.03) !important;
+	color: #2271b1 !important;
+}
+
+.saw-below-editor-tabs-wrapper .saw-tab-button.saw-tab-active {
+	background: #fff !important;
+	border-bottom-color: #2271b1 !important;
+	color: #2271b1 !important;
+	font-weight: 600 !important;
+}
+
+/* ============================================
+   TAB CONTENT - REUSE EXISTING STYLES
+   ============================================ */
+
+.saw-below-editor-tabs-wrapper .saw-tabs-content {
+	/* Inherited from tabs.css */
+	padding: 24px !important;
+	background: #fff !important;
+}
+
+.saw-below-editor-tabs-wrapper .saw-tab-content {
+	/* Inherited from tabs.css */
+	display: none !important;
+}
+
+.saw-below-editor-tabs-wrapper .saw-tab-content.saw-tab-content-active {
+	display: block !important;
+}
+
+/* ============================================
+   FIELD GROUPS - REUSE EXISTING STYLES
+   ============================================ */
+
+.saw-below-editor-tabs-wrapper .saw-field-group {
+	/* Inherited from tabs.css and components.css */
+	margin-bottom: 20px !important;
+}
+
+.saw-below-editor-tabs-wrapper .saw-field-label {
+	display: block !important;
+	margin-bottom: 8px !important;
+	font-weight: 600 !important;
+	color: #1d2327 !important;
+}
+
+.saw-below-editor-tabs-wrapper .saw-field-input {
+	margin-bottom: 8px !important;
+}
+
+.saw-below-editor-tabs-wrapper .saw-field-description {
+	margin: 0 !important;
+	font-size: 13px !important;
+	color: #646970 !important;
+	line-height: 1.5 !important;
+}
+
+/* ============================================
+   FORM INPUTS - REUSE EXISTING STYLES
+   ============================================ */
+
+.saw-below-editor-tabs-wrapper .form-input,
+.saw-below-editor-tabs-wrapper .form-select,
+.saw-below-editor-tabs-wrapper .form-textarea {
+	width: 100% !important;
+	max-width: 600px !important;
+	padding: 8px 12px !important;
+	border: 1px solid #8c8f94 !important;
+	border-radius: 4px !important;
+	font-size: 14px !important;
+	line-height: 1.5 !important;
+	box-sizing: border-box !important;
+}
+
+.saw-below-editor-tabs-wrapper .form-input:focus,
+.saw-below-editor-tabs-wrapper .form-select:focus,
+.saw-below-editor-tabs-wrapper .form-textarea:focus {
+	border-color: #2271b1 !important;
+	box-shadow: 0 0 0 1px #2271b1 !important;
+	outline: none !important;
+}
+
+.saw-below-editor-tabs-wrapper .form-textarea {
+	resize: vertical !important;
+	min-height: 100px !important;
+}
+
+/* ============================================
+   SUB-TABS SUPPORT
+   ============================================ */
+
+.saw-below-editor-tabs-wrapper .saw-sub-tabs-container {
+	/* Inherited from sub-tabs.css */
+	display: flex !important;
+	gap: 0 !important;
+	min-height: 400px !important;
+	background: #fff !important;
+	border: 1px solid #c3c4c7 !important;
+	border-radius: 4px !important;
+	margin-top: 10px !important;
+}
+
+.saw-below-editor-tabs-wrapper .saw-sub-tabs-menu {
+	/* Inherited from sub-tabs.css */
+	flex: 0 0 220px !important;
+	background: #f0f0f1 !important;
+	border-right: 1px solid #c3c4c7 !important;
+}
+
+.saw-below-editor-tabs-wrapper .saw-sub-tabs-panels {
+	/* Inherited from sub-tabs.css */
+	flex: 1 !important;
+	padding: 24px !important;
+	overflow-y: auto !important;
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+@media screen and (max-width: 782px) {
+	.saw-below-editor-tabs-wrapper {
+		margin: 15px 0 0 0 !important;
+	}
+
+	.saw-below-editor-tabs-wrapper .saw-tabs-content {
+		padding: 16px !important;
+	}
+
+	.saw-below-editor-tabs-wrapper .saw-tab-button {
+		padding: 10px 16px !important;
+		font-size: 13px !important;
+	}
+
+	.saw-below-editor-tabs-wrapper .form-input,
+	.saw-below-editor-tabs-wrapper .form-select,
+	.saw-below-editor-tabs-wrapper .form-textarea {
+		max-width: 100% !important;
+	}
+
+	/* Sub-tabs stack vertically on mobile */
+	.saw-below-editor-tabs-wrapper .saw-sub-tabs-container {
+		flex-direction: column !important;
+	}
+
+	.saw-below-editor-tabs-wrapper .saw-sub-tabs-menu {
+		flex: 0 0 auto !important;
+		border-right: none !important;
+		border-bottom: 1px solid #c3c4c7 !important;
+	}
+}
+
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+
+.saw-below-editor-tabs-wrapper .saw-tab-button:focus {
+	outline: 2px solid #2271b1 !important;
+	outline-offset: -2px !important;
+}
+
+.saw-below-editor-tabs-wrapper .form-input:focus,
+.saw-below-editor-tabs-wrapper .form-select:focus,
+.saw-below-editor-tabs-wrapper .form-textarea:focus {
+	outline: 2px solid #2271b1 !important;
+	outline-offset: -2px !important;
+}
+
+/* Screen reader only text */
+.saw-below-editor-tabs-wrapper .sr-only {
+	position: absolute !important;
+	width: 1px !important;
+	height: 1px !important;
+	padding: 0 !important;
+	margin: -1px !important;
+	overflow: hidden !important;
+	clip: rect(0, 0, 0, 0) !important;
+	white-space: nowrap !important;
+	border-width: 0 !important;
+}
+
+/* ============================================
+   PRINT STYLES
+   ============================================ */
+
+@media print {
+	.saw-below-editor-tabs-wrapper .saw-tabs-nav {
+		display: none !important;
+	}
+
+	.saw-below-editor-tabs-wrapper .saw-tab-content {
+		display: block !important;
+		page-break-inside: avoid !important;
+	}
+}
