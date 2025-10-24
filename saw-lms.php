@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Definice konstant.
-define( 'SAW_LMS_VERSION', '3.2.0' );
+define( 'SAW_LMS_VERSION', '3.3.0' );
 define( 'SAW_LMS_PLUGIN_FILE', __FILE__ );
 define( 'SAW_LMS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SAW_LMS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -122,6 +122,13 @@ register_deactivation_hook( __FILE__, 'saw_lms_deactivate' );
 require_once SAW_LMS_PLUGIN_DIR . 'includes/class-saw-lms.php';
 
 /**
+ * Load Course Settings Page (separate admin screen)
+ *
+ * @since 3.3.0
+ */
+require_once SAW_LMS_PLUGIN_DIR . 'admin/class-course-settings-page.php';
+
+/**
  * Spuštění pluginu
  *
  * @since 1.0.0
@@ -135,6 +142,9 @@ function saw_lms_run() {
 
 	$plugin = SAW_LMS::init();
 	$plugin->run();
+	
+	// Initialize Course Settings Page
+	SAW_LMS_Course_Settings_Page::init();
 }
 
 // Start!

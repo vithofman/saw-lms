@@ -1,0 +1,57 @@
+/**
+ * SAW LMS – Course Edit Layout Fix
+ * Odstraní ResizableBox divider a vynutí auto-height metabox panelu
+ * (jen pro naše CPT v blokovém editoru).
+ * @version 3.2.9
+ */
+
+/* Metabox area nesmí mít vlastní scroll/height */
+body.post-type-saw_course .edit-post-meta-boxes-area,
+body.post-type-saw_section .edit-post-meta-boxes-area,
+body.post-type-saw_lesson .edit-post-meta-boxes-area,
+body.post-type-saw_quiz .edit-post-meta-boxes-area {
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+/* ResizableBox kontejner: vypnout výšku a resize */
+body.post-type-saw_course .edit-post-meta-boxes-area .components-resizable-box__container,
+body.post-type-saw_section .edit-post-meta-boxes-area .components-resizable-box__container,
+body.post-type-saw_lesson .edit-post-meta-boxes-area .components-resizable-box__container,
+body.post-type-saw_quiz .edit-post-meta-boxes-area .components-resizable-box__container {
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  resize: none !important;
+}
+
+/* Schovat všechny handle (divider) – i budoucí varianty */
+body.post-type-saw_course .edit-post-meta-boxes-area .components-resizable-box__handle,
+body.post-type-saw_section .edit-post-meta-boxes-area .components-resizable-box__handle,
+body.post-type-saw_lesson .edit-post-meta-boxes-area .components-resizable-box__handle,
+body.post-type-saw_quiz .edit-post-meta-boxes-area .components-resizable-box__handle,
+body.post-type-saw_course .edit-post-meta-boxes-area [class*="resizable-box__handle"],
+body.post-type-saw_section .edit-post-meta-boxes-area [class*="resizable-box__handle"],
+body.post-type-saw_lesson .edit-post-meta-boxes-area [class*="resizable-box__handle"],
+body.post-type-saw_quiz .edit-post-meta-boxes-area [class*="resizable-box__handle"] {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+/* Hlavní content – jen jeden scrollbar pro stránku */
+body.post-type-saw_course .interface-interface-skeleton__content,
+body.post-type-saw_section .interface-interface-skeleton__content,
+body.post-type-saw_lesson .interface-interface-skeleton__content,
+body.post-type-saw_quiz .interface-interface-skeleton__content {
+  overflow: visible !important;
+}
+
+/* Jemná hrana nad metabox zónou (vizuální přechod) */
+body.post-type-saw_course .edit-post-meta-boxes-main,
+body.post-type-saw_section .edit-post-meta-boxes-main,
+body.post-type-saw_lesson .edit-post-meta-boxes-main,
+body.post-type-saw_quiz .edit-post-meta-boxes-main {
+  box-shadow: none !important;
+  border-top: 1px solid #dcdcde !important;
+}

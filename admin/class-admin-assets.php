@@ -1,19 +1,11 @@
 <?php
 /**
- * Admin Assets Loader
- *
- * Správné načítání CSS a JavaScript souborů pro admin rozhraní.
- * Všechny assety jsou načteny pouze v admin oblasti.
- *
- * UPDATED in v3.1.4: Added tabs.css and tabs.js for Course CPT meta boxes.
- * UPDATED in v3.2.4: Added sub-tabs.css and sub-tabs.js for Settings sub-tabs.
- * FIXED in v3.2.5: Fixed should_load_assets() with fallback logic for early initialization.
- * FIXED in v3.2.6: Added course-edit-layout-fix.css and course-edit-layout-fix.js to remove Gutenberg split-screen.
+ * Admin Assets Loader - FINAL VERSION WITH VERTICAL LAYOUT
  *
  * @package    SAW_LMS
  * @subpackage SAW_LMS/admin
  * @since      1.0.0
- * @version    3.2.6
+ * @version    3.2.7-FINAL
  */
 
 // If this file is called directly, abort.
@@ -24,35 +16,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * SAW_LMS_Admin_Assets Class
  *
- * Spravuje načítání všech admin assets (CSS/JS).
- *
  * @since 1.0.0
  */
 class SAW_LMS_Admin_Assets {
 
-	/**
-	 * Plugin name
-	 *
-	 * @since  1.0.0
-	 * @var    string
-	 */
 	private $plugin_name;
-
-	/**
-	 * Plugin version
-	 *
-	 * @since  1.0.0
-	 * @var    string
-	 */
 	private $version;
 
-	/**
-	 * Initialize the class
-	 *
-	 * @since 1.0.0
-	 * @param string $plugin_name Plugin name.
-	 * @param string $version     Plugin version.
-	 */
 	public function __construct( $plugin_name, $version ) {
 		$this->plugin_name = $plugin_name;
 		$this->version     = $version;
@@ -61,27 +31,16 @@ class SAW_LMS_Admin_Assets {
 	/**
 	 * Register all admin styles
 	 *
-	 * Enqueue order je důležitý:
-	 * 1. Variables (CSS proměnné)
-	 * 2. Utilities (utility třídy)
-	 * 3. Components (UI komponenty)
-	 * 4. Tabs (tabbed meta boxes)
-	 * 5. Sub-tabs (vertical sub-tabs for Settings) - NEW in v3.2.4
-	 * 5b. Course Edit Layout Fix (removes split-screen) - NEW in v3.2.6
-	 * 6. Layouts (page layouts)
-	 * 7. Admin Menu (Phase 2.5)
-	 *
 	 * @since 1.0.0
 	 */
 	public function enqueue_styles() {
-		// Check if we're in admin area and on SAW LMS pages.
 		if ( ! $this->should_load_assets() ) {
 			return;
 		}
 
 		$assets_url = SAW_LMS_PLUGIN_URL . 'assets/css/admin/';
 
-		// 1. Variables - MUST be first.
+		// 1. Variables
 		wp_enqueue_style(
 			$this->plugin_name . '-admin-variables',
 			$assets_url . 'variables.css',
@@ -90,7 +49,7 @@ class SAW_LMS_Admin_Assets {
 			'all'
 		);
 
-		// 2. Utilities.
+		// 2. Utilities
 		wp_enqueue_style(
 			$this->plugin_name . '-admin-utilities',
 			$assets_url . 'utilities.css',
@@ -99,7 +58,7 @@ class SAW_LMS_Admin_Assets {
 			'all'
 		);
 
-		// 3. Components.
+		// 3. Components
 		wp_enqueue_style(
 			$this->plugin_name . '-admin-components',
 			$assets_url . 'components.css',
@@ -111,7 +70,7 @@ class SAW_LMS_Admin_Assets {
 			'all'
 		);
 
-		// 4. Tabs (v3.1.4) - for tabbed meta boxes in Course CPT.
+		// 4. Tabs
 		wp_enqueue_style(
 			$this->plugin_name . '-admin-tabs',
 			$assets_url . 'tabs.css',
@@ -123,7 +82,7 @@ class SAW_LMS_Admin_Assets {
 			'all'
 		);
 
-		// 5. Sub-tabs (NEW in v3.2.4) - for vertical sub-tabs in Settings tab.
+		// 5. Sub-tabs
 		wp_enqueue_style(
 			$this->plugin_name . '-admin-sub-tabs',
 			$assets_url . 'sub-tabs.css',
@@ -136,21 +95,7 @@ class SAW_LMS_Admin_Assets {
 			'all'
 		);
 
-		/*
-		// 5b. Course Edit Layout Fix CSS (NEW in v3.2.6) - fixes split-screen issue.
-		wp_enqueue_style(
-			$this->plugin_name . '-course-edit-layout-fix',
-			$assets_url . 'course-edit-layout-fix.css',
-			array(
-				$this->plugin_name . '-admin-tabs',
-				$this->plugin_name . '-admin-sub-tabs',
-			),
-			$this->version,
-			'all'
-		);
-		*/
-
-		// 6. Layouts.
+		// 6. Layouts
 		wp_enqueue_style(
 			$this->plugin_name . '-admin-layouts',
 			$assets_url . 'layouts.css',
@@ -163,7 +108,7 @@ class SAW_LMS_Admin_Assets {
 			'all'
 		);
 
-		// 7. Admin Menu Styling (Phase 2.5).
+		// 8. Admin Menu
 		wp_enqueue_style(
 			$this->plugin_name . '-admin-menu',
 			$assets_url . 'admin-menu.css',
@@ -179,52 +124,52 @@ class SAW_LMS_Admin_Assets {
 	 * @since 1.0.0
 	 */
 	public function enqueue_scripts() {
-		// Check if we're in admin area and on SAW LMS pages.
 		if ( ! $this->should_load_assets() ) {
 			return;
 		}
 
 		$assets_url = SAW_LMS_PLUGIN_URL . 'assets/js/admin/';
 
-		// Admin utilities - vanilla JavaScript.
+		// Admin utilities
 		wp_enqueue_script(
 			$this->plugin_name . '-admin-utilities',
 			$assets_url . 'utilities.js',
-			array(), // NO jQuery dependency - pure vanilla JS.
+			array(),
 			$this->version,
-			true // Load in footer.
+			true
 		);
 
-		// Tabs JS (v3.1.4) - requires jQuery.
+		// Tabs JS
 		wp_enqueue_script(
 			$this->plugin_name . '-admin-tabs',
 			$assets_url . 'tabs.js',
 			array( 'jquery' ),
 			$this->version,
-			true // Load in footer.
+			true
 		);
 
-		// Sub-tabs JS (NEW in v3.2.4) - requires jQuery.
+		// Sub-tabs JS
 		wp_enqueue_script(
 			$this->plugin_name . '-admin-sub-tabs',
 			$assets_url . 'sub-tabs.js',
 			array( 'jquery', $this->plugin_name . '-admin-tabs' ),
 			$this->version,
-			true // Load in footer.
+			true
 		);
 
-		/*
-		// Course Edit Layout Fix JS (NEW in v3.2.6) - removes Gutenberg resizable wrapper.
-		wp_enqueue_script(
-			$this->plugin_name . '-course-edit-layout-fix',
-			$assets_url . 'course-edit-layout-fix.js',
-			array(), // NO dependencies - pure vanilla JS.
-			$this->version,
-			true // Load in footer.
-		);
-		*/
+		// Gutenberg Settings Tab (only on Course screen)
+		$screen = get_current_screen();
+		if ( $screen && $screen->post_type === 'saw_course' && $screen->base === 'post' ) {
+			wp_enqueue_script(
+				$this->plugin_name . '-gutenberg-settings-tab',
+				$assets_url . 'gutenberg-settings-tab.js',
+				array( 'jquery' ),
+				$this->version,
+				true
+			);
+		}
 
-		// Localize script with AJAX data.
+		// Localize script
 		wp_localize_script(
 			$this->plugin_name . '-admin-utilities',
 			'sawLmsAdmin',
@@ -250,37 +195,24 @@ class SAW_LMS_Admin_Assets {
 	/**
 	 * Determine if assets should be loaded
 	 *
-	 * Načteme assety pouze na SAW LMS admin stránkách pro optimalizaci výkonu.
-	 *
-	 * FIXED in v3.2.5: Added fallback logic for early initialization.
-	 * Problem: get_current_screen() returns NULL when called too early (before 'current_screen' hook).
-	 * Solution: Use alternative detection methods when $screen is not available.
-	 *
 	 * @since  1.0.0
-	 * @return bool True if assets should be loaded.
+	 * @return bool
 	 */
 	private function should_load_assets() {
-		// Check if we're in admin.
 		if ( ! is_admin() ) {
 			return false;
 		}
 
-		// Get current screen - may be NULL during early initialization.
 		$screen = get_current_screen();
 
-		// ============================================================
-		// FALLBACK LOGIC: When get_current_screen() returns NULL
-		// ============================================================
 		if ( ! $screen ) {
 			global $pagenow;
 
-			// Method 1: Check $_GET['page'] parameter for SAW LMS admin pages.
 			$page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
 			if ( ! empty( $page ) && strpos( $page, 'saw-lms' ) === 0 ) {
 				return true;
 			}
 
-			// Method 2: Check $_GET['post_type'] for SAW LMS CPTs.
 			$post_type = isset( $_GET['post_type'] ) ? sanitize_text_field( wp_unslash( $_GET['post_type'] ) ) : '';
 			if ( ! empty( $post_type ) ) {
 				$saw_post_types = array( 'saw_course', 'saw_section', 'saw_lesson', 'saw_quiz' );
@@ -289,9 +221,7 @@ class SAW_LMS_Admin_Assets {
 				}
 			}
 
-			// Method 3: Check for post editing (post.php, post-new.php).
 			if ( isset( $pagenow ) && in_array( $pagenow, array( 'post.php', 'post-new.php' ), true ) ) {
-				// For post.php - check existing post.
 				$post_id = isset( $_GET['post'] ) ? intval( $_GET['post'] ) : 0;
 				if ( $post_id > 0 ) {
 					$post = get_post( $post_id );
@@ -302,26 +232,16 @@ class SAW_LMS_Admin_Assets {
 						}
 					}
 				}
-
-				// For post-new.php - already checked post_type above.
 			}
 
-			// If we can't determine the page type, don't load assets (conservative approach).
-			// This prevents loading assets on every admin page unnecessarily.
 			return false;
 		}
 
-		// ============================================================
-		// NORMAL LOGIC: When get_current_screen() is available
-		// ============================================================
-
-		// Load on all SAW LMS admin pages.
 		$page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
 		if ( ! empty( $page ) && strpos( $page, 'saw-lms' ) === 0 ) {
 			return true;
 		}
 
-		// Load on SAW LMS post type screens.
 		if ( isset( $screen->post_type ) ) {
 			$saw_post_types = array(
 				'saw_course',
@@ -335,44 +255,22 @@ class SAW_LMS_Admin_Assets {
 			}
 		}
 
-		// Don't load on other pages.
 		return false;
 	}
 
-	/**
-	 * Add admin body classes
-	 *
-	 * Přidáme CSS třídy na body tag v admin pro lepší styling.
-	 *
-	 * @since  1.0.0
-	 * @param  string $classes Current body classes.
-	 * @return string Modified body classes.
-	 */
 	public function add_admin_body_class( $classes ) {
 		if ( ! $this->should_load_assets() ) {
 			return $classes;
 		}
-
 		$classes .= ' saw-lms-admin ';
-
 		return $classes;
 	}
 
-	/**
-	 * Print custom CSS variables in admin head
-	 *
-	 * Umožňuje dynamické nastavení proměnných z PHP (pro budoucí Settings page).
-	 *
-	 * @since 1.0.0
-	 */
 	public function print_custom_css_vars() {
 		if ( ! $this->should_load_assets() ) {
 			return;
 		}
-
-		// Možnost pro budoucí customizaci barev přes Settings.
 		$custom_primary_color = get_option( 'saw_lms_primary_color', '' );
-
 		if ( ! empty( $custom_primary_color ) ) {
 			echo '<style id="saw-lms-custom-vars">';
 			echo ':root { --saw-primary: ' . esc_attr( $custom_primary_color ) . '; }';
@@ -380,13 +278,6 @@ class SAW_LMS_Admin_Assets {
 		}
 	}
 
-	/**
-	 * Add custom admin menu icon CSS
-	 *
-	 * WordPress admin menu ikonka styling.
-	 *
-	 * @since 1.0.0
-	 */
 	public function add_menu_icon_css() {
 		echo '<style>
 			#adminmenu #toplevel_page_saw-lms .wp-menu-image img {
@@ -401,20 +292,10 @@ class SAW_LMS_Admin_Assets {
 		</style>';
 	}
 
-	/**
-	 * Remove admin notices on SAW LMS pages
-	 *
-	 * Skryje cizí admin notices na našich stránkách pro čistší UI.
-	 * (Zachováme pouze naše vlastní notices)
-	 *
-	 * @since 1.0.0
-	 */
 	public function hide_unrelated_notices() {
 		if ( ! $this->should_load_assets() ) {
 			return;
 		}
-
-		// Remove all notices except our own.
 		remove_all_actions( 'admin_notices' );
 		remove_all_actions( 'all_admin_notices' );
 	}
@@ -422,25 +303,13 @@ class SAW_LMS_Admin_Assets {
 	/**
 	 * Initialize hooks
 	 *
-	 * Registruje všechny WordPress hooks.
-	 *
 	 * @since 1.0.0
 	 */
 	public function init_hooks() {
-		// Enqueue styles and scripts.
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_styles' ), 10 );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ), 10 );
-
-		// Add custom CSS vars.
 		add_action( 'admin_head', array( $this, 'print_custom_css_vars' ) );
-
-		// Add menu icon CSS.
 		add_action( 'admin_head', array( $this, 'add_menu_icon_css' ) );
-
-		// Add body class.
 		add_filter( 'admin_body_class', array( $this, 'add_admin_body_class' ) );
-
-		// Hide unrelated notices (optional - uncomment if needed).
-		// add_action( 'admin_head', array( $this, 'hide_unrelated_notices' ), 1 );
 	}
 }

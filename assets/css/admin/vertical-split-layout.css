@@ -1,0 +1,213 @@
+/**
+ * Vertical Split-Screen Layout Fix
+ *
+ * Changes Course Details layout from horizontal (top/bottom) to vertical (left/right).
+ * This makes the resizable divider USEFUL instead of annoying!
+ *
+ * LAYOUT:
+ * ┌─────────────────┬──────────────┐
+ * │                 │              │
+ * │   Gutenberg     │   Course     │
+ * │   Editor        │   Details    │
+ * │   (60%)         │   (40%)      │
+ * │                 │              │
+ * └─────────────────┴──────────────┘
+ *
+ * @package    SAW_LMS
+ * @subpackage Assets/CSS/Admin
+ * @since      3.2.7-VERTICAL
+ * @version    3.2.7-VERTICAL
+ */
+
+/* ============================================
+   FORCE VERTICAL SPLIT LAYOUT
+   ============================================ */
+
+/* Main container - use flexbox for side-by-side layout */
+body.post-type-saw_course #poststuff {
+	display: flex !important;
+	flex-direction: row !important;
+	gap: 0 !important;
+	align-items: stretch !important;
+}
+
+/* Editor area - left side (60% width) */
+body.post-type-saw_course #post-body #postdivrich {
+	flex: 0 0 60% !important;
+	width: 60% !important;
+	min-width: 400px !important;
+	max-width: none !important;
+	margin: 0 !important;
+	padding-right: 10px !important;
+}
+
+/* Course Details area - right side (40% width) */
+body.post-type-saw_course #postbox-container-2 {
+	flex: 0 0 40% !important;
+	width: 40% !important;
+	min-width: 300px !important;
+	float: none !important;
+	margin-left: 0 !important;
+	padding-left: 10px !important;
+	border-left: 1px solid #c3c4c7 !important;
+}
+
+/* Remove horizontal divider styling */
+body.post-type-saw_course .edit-post-meta-boxes-main {
+	box-shadow: none !important;
+	border-top: none !important;
+}
+
+/* Ensure Gutenberg editor takes full height */
+body.post-type-saw_course .interface-interface-skeleton__content,
+body.post-type-saw_course .edit-post-layout__content {
+	display: flex !important;
+	flex-direction: row !important;
+	height: 100vh !important;
+	overflow: hidden !important;
+}
+
+/* Editor should scroll independently */
+body.post-type-saw_course .editor-styles-wrapper,
+body.post-type-saw_course .block-editor-writing-flow {
+	overflow-y: auto !important;
+	height: 100% !important;
+}
+
+/* Course Details should scroll independently */
+body.post-type-saw_course #postbox-container-2 {
+	overflow-y: auto !important;
+	height: 100vh !important;
+	padding-top: 20px !important;
+}
+
+/* Resizable handle - vertical between panels */
+body.post-type-saw_course .components-resizable-box__handle-right {
+	display: block !important;
+	width: 6px !important;
+	height: 100% !important;
+	top: 0 !important;
+	right: -3px !important;
+	cursor: ew-resize !important;
+	background: #ddd !important;
+	border-left: 1px solid #c3c4c7 !important;
+	border-right: 1px solid #c3c4c7 !important;
+	z-index: 100 !important;
+}
+
+body.post-type-saw_course .components-resizable-box__handle-right:hover {
+	background: #2271b1 !important;
+}
+
+/* Hide horizontal handles (we only want vertical) */
+body.post-type-saw_course .components-resizable-box__handle-top,
+body.post-type-saw_course .components-resizable-box__handle-bottom {
+	display: none !important;
+}
+
+/* ============================================
+   RESPONSIVE - MOBILE/TABLET
+   ============================================ */
+
+@media screen and (max-width: 1024px) {
+	/* On tablet and below, stack vertically (original behavior) */
+	body.post-type-saw_course #poststuff {
+		flex-direction: column !important;
+	}
+
+	body.post-type-saw_course #post-body #postdivrich,
+	body.post-type-saw_course #postbox-container-2 {
+		flex: 0 0 auto !important;
+		width: 100% !important;
+		min-width: 0 !important;
+		padding: 0 !important;
+		border: none !important;
+	}
+
+	body.post-type-saw_course #postbox-container-2 {
+		border-top: 1px solid #c3c4c7 !important;
+		margin-top: 20px !important;
+		padding-top: 20px !important;
+		height: auto !important;
+		overflow-y: visible !important;
+	}
+
+	/* Hide resize handle on mobile */
+	body.post-type-saw_course .components-resizable-box__handle {
+		display: none !important;
+	}
+}
+
+/* ============================================
+   VISUAL FEEDBACK
+   ============================================ */
+
+/* Debug banner - shows that vertical layout is active */
+body.post-type-saw_course::before {
+	content: "📐 VERTICAL LAYOUT ACTIVE" !important;
+	display: block !important;
+	background: #00a32a !important;
+	color: white !important;
+	padding: 5px 10px !important;
+	font-size: 11px !important;
+	font-weight: bold !important;
+	position: fixed !important;
+	bottom: 0 !important;
+	right: 0 !important;
+	z-index: 999999 !important;
+	border-radius: 3px 0 0 0 !important;
+}
+
+/* Optional: Add subtle grid background to show split */
+body.post-type-saw_course #poststuff {
+	background: linear-gradient(90deg, #f9f9f9 60%, #fff 60%) !important;
+}
+
+/* ============================================
+   FIX FOR GUTENBERG TOOLBAR
+   ============================================ */
+
+/* Toolbar should stay at top of editor panel */
+body.post-type-saw_course .edit-post-header {
+	position: sticky !important;
+	top: 32px !important;
+	z-index: 100 !important;
+	background: #fff !important;
+	border-bottom: 1px solid #c3c4c7 !important;
+}
+
+/* ============================================
+   OPTIONAL: WIDER COURSE DETAILS
+   ============================================ */
+
+/* 
+Uncomment this if you want Course Details wider (50/50 split):
+
+body.post-type-saw_course #post-body #postdivrich {
+	flex: 0 0 50% !important;
+	width: 50% !important;
+}
+
+body.post-type-saw_course #postbox-container-2 {
+	flex: 0 0 50% !important;
+	width: 50% !important;
+}
+*/
+
+/* ============================================
+   OPTIONAL: NARROWER COURSE DETAILS
+   ============================================ */
+
+/* 
+Uncomment this if you want Course Details narrower (70/30 split):
+
+body.post-type-saw_course #post-body #postdivrich {
+	flex: 0 0 70% !important;
+	width: 70% !important;
+}
+
+body.post-type-saw_course #postbox-container-2 {
+	flex: 0 0 30% !important;
+	width: 30% !important;
+}
+*/
