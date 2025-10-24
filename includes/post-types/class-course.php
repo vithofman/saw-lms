@@ -7,12 +7,11 @@
  * REFACTORED in v3.1.1: Difficulty as meta field instead of taxonomy.
  * FIXED in v3.1.2: Added debugging for tabs configuration.
  * FIXED in v3.1.4: Removed enqueue_admin_assets() - now handled centrally by class-admin-assets.php
- * UPDATED in v3.2.7: Moved tabs below Gutenberg editor using edit_form_after_editor hook.
  *
  * @package     SAW_LMS
  * @subpackage  Post_Types
  * @since       2.1.0
- * @version     3.2.7
+ * @version     3.1.4
  */
 
 // Exit if accessed directly.
@@ -29,7 +28,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  * UPDATED in v3.1.1: Difficulty is now a meta field, not taxonomy.
  * FIXED in v3.1.2: Added debugging and validation for tabs config.
  * FIXED in v3.1.4: Removed duplicate asset enqueueing.
- * UPDATED in v3.2.7: Tabs now render below Gutenberg editor.
  *
  * @since 2.1.0
  */
@@ -78,7 +76,6 @@ class SAW_LMS_Course {
 	 *
 	 * UPDATED in v3.1.0: Load tabs config.
 	 * UPDATED in v3.1.4: Removed enqueue hook.
-	 * UPDATED in v3.2.7: Removed add_meta_boxes hook, added edit_form_after_editor hook.
 	 *
 	 * @since 2.1.0
 	 */
@@ -92,10 +89,8 @@ class SAW_LMS_Course {
 		// Register taxonomies.
 		add_action( 'init', array( $this, 'register_taxonomies' ) );
 
-		// Render tabs below editor (v3.2.7).
-		add_action( 'edit_form_after_editor', array( $this, 'render_tabs_below_editor' ) );
-
-		// Save meta data.
+		// Meta boxes.
+		add_action( 'add_meta_boxes', array( $this, 'add_meta_boxes' ) );
 		add_action( 'save_post_' . self::POST_TYPE, array( $this, 'save_meta_boxes' ), 10, 2 );
 
 		// Admin columns.
@@ -288,31 +283,46 @@ class SAW_LMS_Course {
 	}
 
 	/**
-	 * Render tabs below Gutenberg editor
+	 * Add meta boxes
 	 *
-	 * Uses edit_form_after_editor hook to render tabs below the editor.
-	 * This avoids the split-screen layout issue caused by meta boxes.
+	 * REFACTORED in v3.1.0: Single tabbed meta box.
 	 *
-	 * @since 3.2.7
+	 * @since 2.1.0
+	 * @return void
+	 */
+	public function add_meta_boxes() {
+		// Main tabbed meta box.
+		add_meta_box(
+			'saw_lms_course_details',
+			__( 'Course Details', 'saw-lms' ),
+			array( $this, 'render_tabbed_meta_box' ),
+			self::POST_TYPE,
+			'normal',
+			'high'
+		);
+	}
+
+	/**
+	 * Render tabbed meta box
+	 *
+	 * UPDATED in v3.1.0: Uses Meta Box Helper for tabs.
+	 * FIXED in v3.1.2: Added debugging output when no tabs are loaded.
+	 *
+	 * @since 3.1.0
 	 * @param WP_Post $post Current post object.
 	 * @return void
 	 */
-	public function render_tabs_below_editor( $post ) {
-		// Only render for our post type.
-		if ( self::POST_TYPE !== $post->post_type ) {
-			return;
-		}
+	public function render_tabbed_meta_box( $post ) {
+		// Nonce for security.
+		wp_nonce_field( 'saw_lms_course_meta', 'saw_lms_course_nonce' );
 
 		// Calculate stats for Stats tab.
 		$this->calculate_course_stats( $post->ID );
 
-		// Render tabs using helper.
-		SAW_LMS_Meta_Box_Helper::render_below_editor_tabs(
-			$post,
-			$this->tabs_config,
-			'saw_lms_course_meta',
-			'saw_lms_course_nonce'
-		);
+		
+
+		// Render tabs.
+		SAW_LMS_Meta_Box_Helper::render_tabbed_meta_box( $post->ID, $this->tabs_config );
 	}
 
 	/**

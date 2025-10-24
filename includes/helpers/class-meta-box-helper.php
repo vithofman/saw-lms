@@ -8,12 +8,11 @@
  * FIXED in v3.1.5: COMPLETED render_field() - all field types now render properly!
  * UPDATED in v3.2.4: Added render_sub_tabbed_content() for vertical sub-tabs support.
  * FIXED in v3.2.5: Fixed data attribute mismatch - data-panel-id → data-panel-content
- * UPDATED in v3.2.7: Added render_below_editor_tabs() for rendering tabs below Gutenberg editor.
  *
  * @package     SAW_LMS
  * @subpackage  Helpers
  * @since       3.0.0
- * @version     3.2.7
+ * @version     3.2.5
  */
 
 // Exit if accessed directly.
@@ -29,77 +28,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @since 3.0.0
  */
 class SAW_LMS_Meta_Box_Helper {
-
-	/**
-	 * Render tabbed content below Gutenberg editor
-	 *
-	 * Renders tabs using edit_form_after_editor hook, placing content below the editor
-	 * instead of in a meta box. This avoids the split-screen layout issue.
-	 *
-	 * @since 3.2.7
-	 * @param WP_Post $post Current post object.
-	 * @param array   $tabs Array of tabs configuration.
-	 * @param string  $nonce_action Nonce action name for security.
-	 * @param string  $nonce_name Nonce field name.
-	 * @return void
-	 */
-	public static function render_below_editor_tabs( $post, $tabs, $nonce_action, $nonce_name ) {
-		if ( empty( $tabs ) ) {
-			return;
-		}
-
-		// Nonce for security.
-		wp_nonce_field( $nonce_action, $nonce_name );
-
-		echo '<div class="saw-below-editor-tabs-wrapper">';
-
-		// Render tab navigation.
-		echo '<div class="saw-tabs-nav">';
-		$first = true;
-		foreach ( $tabs as $tab_id => $tab_config ) {
-			$active_class = $first ? ' saw-tab-active' : '';
-			printf(
-				'<button type="button" class="saw-tab-button%s" data-tab="%s">%s</button>',
-				esc_attr( $active_class ),
-				esc_attr( $tab_id ),
-				esc_html( $tab_config['label'] )
-			);
-			$first = false;
-		}
-		echo '</div>';
-
-		// Render tab content.
-		echo '<div class="saw-tabs-content">';
-		$first = true;
-		foreach ( $tabs as $tab_id => $tab_config ) {
-			$active_class = $first ? ' saw-tab-content-active' : '';
-			printf(
-				'<div class="saw-tab-content%s" data-tab-content="%s">',
-				esc_attr( $active_class ),
-				esc_attr( $tab_id )
-			);
-
-			// Check if this tab has sub-tabs (Settings tab special case).
-			if ( 'settings' === $tab_id && self::has_sub_tabs( $tab_config['fields'] ) ) {
-				// Render with sub-tabs.
-				self::render_sub_tabbed_content( $post->ID, $tab_config['fields'] );
-			} else {
-				// Render fields normally.
-				if ( ! empty( $tab_config['fields'] ) ) {
-					foreach ( $tab_config['fields'] as $key => $field ) {
-						$value = self::get_field_value( $post->ID, $key, $field );
-						self::render_field( $key, $field, $value );
-					}
-				}
-			}
-
-			echo '</div>'; // .saw-tab-content
-			$first = false;
-		}
-		echo '</div>'; // .saw-tabs-content
-
-		echo '</div>'; // .saw-below-editor-tabs-wrapper
-	}
 
 	/**
 	 * Render a tabbed meta box

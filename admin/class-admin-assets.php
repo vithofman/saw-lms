@@ -9,12 +9,11 @@
  * UPDATED in v3.2.4: Added sub-tabs.css and sub-tabs.js for Settings sub-tabs.
  * FIXED in v3.2.5: Fixed should_load_assets() with fallback logic for early initialization.
  * FIXED in v3.2.6: Added course-edit-layout-fix.css and course-edit-layout-fix.js to remove Gutenberg split-screen.
- * UPDATED in v3.2.7: Added below-editor-tabs.css for rendering tabs below Gutenberg editor.
  *
  * @package    SAW_LMS
  * @subpackage SAW_LMS/admin
  * @since      1.0.0
- * @version    3.2.7
+ * @version    3.2.6
  */
 
 // If this file is called directly, abort.
@@ -68,9 +67,9 @@ class SAW_LMS_Admin_Assets {
 	 * 3. Components (UI komponenty)
 	 * 4. Tabs (tabbed meta boxes)
 	 * 5. Sub-tabs (vertical sub-tabs for Settings) - NEW in v3.2.4
-	 * 6. Below Editor Tabs (tabs below Gutenberg) - NEW in v3.2.7
-	 * 7. Layouts (page layouts)
-	 * 8. Admin Menu (Phase 2.5)
+	 * 5b. Course Edit Layout Fix (removes split-screen) - NEW in v3.2.6
+	 * 6. Layouts (page layouts)
+	 * 7. Admin Menu (Phase 2.5)
 	 *
 	 * @since 1.0.0
 	 */
@@ -137,10 +136,11 @@ class SAW_LMS_Admin_Assets {
 			'all'
 		);
 
-		// 6. Below Editor Tabs (NEW in v3.2.7) - for tabs rendered below Gutenberg editor.
+		/*
+		// 5b. Course Edit Layout Fix CSS (NEW in v3.2.6) - fixes split-screen issue.
 		wp_enqueue_style(
-			$this->plugin_name . '-admin-below-editor-tabs',
-			$assets_url . 'below-editor-tabs.css',
+			$this->plugin_name . '-course-edit-layout-fix',
+			$assets_url . 'course-edit-layout-fix.css',
 			array(
 				$this->plugin_name . '-admin-tabs',
 				$this->plugin_name . '-admin-sub-tabs',
@@ -148,8 +148,9 @@ class SAW_LMS_Admin_Assets {
 			$this->version,
 			'all'
 		);
+		*/
 
-		// 7. Layouts.
+		// 6. Layouts.
 		wp_enqueue_style(
 			$this->plugin_name . '-admin-layouts',
 			$assets_url . 'layouts.css',
@@ -162,7 +163,7 @@ class SAW_LMS_Admin_Assets {
 			'all'
 		);
 
-		// 8. Admin Menu Styling (Phase 2.5).
+		// 7. Admin Menu Styling (Phase 2.5).
 		wp_enqueue_style(
 			$this->plugin_name . '-admin-menu',
 			$assets_url . 'admin-menu.css',
@@ -211,6 +212,17 @@ class SAW_LMS_Admin_Assets {
 			$this->version,
 			true // Load in footer.
 		);
+
+		/*
+		// Course Edit Layout Fix JS (NEW in v3.2.6) - removes Gutenberg resizable wrapper.
+		wp_enqueue_script(
+			$this->plugin_name . '-course-edit-layout-fix',
+			$assets_url . 'course-edit-layout-fix.js',
+			array(), // NO dependencies - pure vanilla JS.
+			$this->version,
+			true // Load in footer.
+		);
+		*/
 
 		// Localize script with AJAX data.
 		wp_localize_script(

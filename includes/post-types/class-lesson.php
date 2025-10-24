@@ -5,12 +5,11 @@
  * Handles registration and functionality for the Lesson CPT.
  * REFACTORED in v3.0.0: Config-based meta boxes using lesson-fields.php
  * FIXED in v3.1.4: Removed enqueue_admin_assets() - now handled centrally by class-admin-assets.php
- * UPDATED in v3.2.7: Moved fields below Gutenberg editor using edit_form_after_editor hook.
  *
  * @package     SAW_LMS
  * @subpackage  Post_Types
  * @since       2.1.0
- * @version     3.2.7
+ * @version     3.1.4
  */
 
 // Exit if accessed directly.
@@ -26,7 +25,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * UPDATED in v3.0.0: Refactored to use config-based meta boxes.
  * FIXED in v3.1.4: Removed duplicate asset enqueueing.
- * UPDATED in v3.2.7: Fields now render below Gutenberg editor.
  *
  * @since 2.1.0
  */
@@ -87,7 +85,6 @@ class SAW_LMS_Lesson {
 	 *
 	 * UPDATED in v3.0.0: Load fields config.
 	 * UPDATED in v3.1.4: Removed enqueue hook.
-	 * UPDATED in v3.2.7: Removed add_meta_boxes hook, added edit_form_after_editor hook.
 	 *
 	 * @since 2.1.0
 	 */
@@ -101,10 +98,8 @@ class SAW_LMS_Lesson {
 		// Register post type.
 		add_action( 'init', array( $this, 'register_post_type' ) );
 
-		// Render fields below editor (v3.2.7).
-		add_action( 'edit_form_after_editor', array( $this, 'render_fields_below_editor' ) );
-
-		// Save meta data.
+		// Meta boxes.
+		add_action( 'add_meta_boxes', array( $this, 'add_meta_boxes' ) );
 		add_action( 'save_post_' . self::POST_TYPE, array( $this, 'save_meta_boxes' ), 10, 2 );
 
 		// Admin columns.
@@ -172,36 +167,56 @@ class SAW_LMS_Lesson {
 	}
 
 	/**
-	 * Render fields below Gutenberg editor
+	 * Add meta boxes
 	 *
-	 * Uses edit_form_after_editor hook to render fields below the editor.
+	 * REFACTORED in v3.0.0: Automatically creates meta boxes from config.
 	 *
-	 * @since 3.2.7
-	 * @param WP_Post $post Current post object.
+	 * @since 2.1.0
 	 * @return void
 	 */
-	public function render_fields_below_editor( $post ) {
-		// Only render for our post type.
-		if ( self::POST_TYPE !== $post->post_type ) {
-			return;
-		}
-
-		// Convert fields config to tabs format for consistency.
-		$tabs = array();
+	public function add_meta_boxes() {
+		// Loop through config and register each meta box.
 		foreach ( $this->fields_config as $box_id => $box_config ) {
-			$tabs[ $box_id ] = array(
-				'label'  => $box_config['title'],
-				'fields' => $box_config['fields'],
+			add_meta_box(
+				'saw_lms_' . $box_id,
+				$box_config['title'],
+				array( $this, 'render_meta_box' ),
+				self::POST_TYPE,
+				isset( $box_config['context'] ) ? $box_config['context'] : 'normal',
+				isset( $box_config['priority'] ) ? $box_config['priority'] : 'default',
+				array(
+					'box_id' => $box_id,
+					'fields' => $box_config['fields'],
+				)
 			);
 		}
+	}
 
-		// Render using helper.
-		SAW_LMS_Meta_Box_Helper::render_below_editor_tabs(
-			$post,
-			$tabs,
-			'saw_lms_lesson_meta',
-			'saw_lms_lesson_nonce'
-		);
+	/**
+	 * Render meta box
+	 *
+	 * Universal rendering method using Meta Box Helper.
+	 *
+	 * @since 3.0.0
+	 * @param WP_Post $post    Current post object.
+	 * @param array   $metabox Meta box arguments.
+	 * @return void
+	 */
+	public function render_meta_box( $post, $metabox ) {
+		$fields = $metabox['args']['fields'];
+
+		// Nonce for security.
+		wp_nonce_field( 'saw_lms_lesson_meta', 'saw_lms_lesson_nonce' );
+
+		echo '<div class="saw-lms-meta-box">';
+
+		// Render each field using helper.
+		foreach ( $fields as $key => $field ) {
+			$value = SAW_LMS_Meta_Box_Helper::get_field_value( $post->ID, $key, $field );
+			SAW_LMS_Meta_Box_Helper::render_field( $key, $field, $value );
+		}
+
+		echo '</div>';
 	}
 
 	/**
