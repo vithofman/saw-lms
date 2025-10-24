@@ -15,7 +15,7 @@
  *
  * @package SAW_LMS
  * @since   1.0.0
- * @version 0.1.0 (fixed activation output issue)
+ * @version 0.1.1
  */
 
 // Zabránit přímému přístupu.
@@ -32,9 +32,8 @@ define( 'SAW_LMS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 
 /**
  * Flag indikující, zda probíhá aktivace pluginu
- * KRITICKÉ: Použije se k potlačení logování během aktivace
  *
- * @since 0.1.0
+ * @since 0.1.1
  */
 if ( ! defined( 'SAW_LMS_ACTIVATING' ) ) {
 	define( 'SAW_LMS_ACTIVATING', false );
@@ -83,14 +82,11 @@ function saw_lms_check_requirements() {
 /**
  * Hook pro aktivaci pluginu
  *
- * FIXED in v0.1.0: Nastavuje SAW_LMS_ACTIVATING flag pro potlačení logování.
- *
  * @since 1.0.0
- * @version 0.1.0
  * @return void
  */
 function saw_lms_activate() {
-	// KRITICKÉ: Nastavíme flag PŘED jakýmkoliv kódem!
+	// CRITICAL: Nastavit flag PŘED načtením Activatoru!
 	if ( ! defined( 'SAW_LMS_ACTIVATING' ) ) {
 		define( 'SAW_LMS_ACTIVATING', true );
 	}
@@ -128,14 +124,11 @@ require_once SAW_LMS_PLUGIN_DIR . 'includes/class-saw-lms.php';
 /**
  * Spuštění pluginu
  *
- * FIXED in v0.1.0: Kontroluje SAW_LMS_ACTIVATING flag před inicializací.
- *
  * @since 1.0.0
- * @version 0.1.0
  * @return void
  */
 function saw_lms_run() {
-	// KRITICKÉ: Nespouštět během aktivace!
+	// CRITICAL: Nespouštět během aktivace!
 	if ( defined( 'SAW_LMS_ACTIVATING' ) && SAW_LMS_ACTIVATING ) {
 		return;
 	}
@@ -144,5 +137,5 @@ function saw_lms_run() {
 	$plugin->run();
 }
 
-// Start! (ale ne během aktivace)
+// Start!
 saw_lms_run();

@@ -4,14 +4,10 @@
  *
  * Handles plugin activation - delegates table creation to Schema Manager.
  *
- * REFACTORED in v3.0.0: All SQL definitions moved to separate schema files.
- * FIXED in v3.1.1: Removed logging during activation to prevent output errors.
- * FIXED in v0.1.0: Added deferred logging via transient flag.
- *
  * @package    SAW_LMS
  * @subpackage SAW_LMS/includes
  * @since      1.0.0
- * @version    0.1.0
+ * @version    3.1.1
  */
 
 // If this file is called directly, abort.
@@ -31,43 +27,20 @@ class SAW_LMS_Activator {
 	 *
 	 * Creates all database tables and sets up initial configuration.
 	 *
-	 * CRITICAL: NO OUTPUT ALLOWED during activation!
-	 * - No echo, print_r, var_dump
-	 * - No wp_mkdir_p that creates folders (outputs)
-	 * - No logging to files (creates files)
-	 * - Use transient flag for deferred logging
-	 *
-	 * REFACTORED in v3.0.0:
-	 * - SQL definitions moved to includes/database/schemas/
-	 * - Table creation delegated to SAW_LMS_Schema class
-	 * - 22 tables total (including course_products)
-	 *
-	 * FIXED in v3.1.1:
-	 * - Removed ALL logging during activation (prevents "headers already sent" errors)
-	 * - Logging will be done on first admin page load instead
-	 *
-	 * FIXED in v0.1.0:
-	 * - Added SAW_LMS_ACTIVATING check
-	 * - All output-generating code moved to deferred execution
-	 *
 	 * @since 1.0.0
-	 * @version 0.1.0
-	 * @return void
+	 * @version 3.1.1
 	 */
 	public static function activate() {
 		// Require Schema Manager.
 		require_once SAW_LMS_PLUGIN_DIR . 'includes/database/class-schema.php';
 
 		// Create all database tables via Schema Manager.
-		// NOTE: create_tables() uses dbDelta() which doesn't output anything.
 		SAW_LMS_Schema::create_tables();
 
 		// Create upload directories.
-		// NOTE: Tato metoda NEOBSAHUJE žádné volání které by generovalo output.
 		self::create_upload_directories();
 
 		// Set default options.
-		// NOTE: add_option() a update_option() negenerují output.
 		self::set_default_options();
 
 		// --- Register CPTs before flush (Phase 2.1) ---
@@ -79,8 +52,6 @@ class SAW_LMS_Activator {
 		require_once SAW_LMS_PLUGIN_DIR . 'includes/post-types/class-quiz.php';
 
 		// Initialize CPTs (registers post types).
-		// NOTE: init() metody pouze registrují post types pomocí register_post_type(),
-		// což negeneruje output.
 		SAW_LMS_Course::init();
 		SAW_LMS_Section::init();
 		SAW_LMS_Lesson::init();
@@ -90,20 +61,14 @@ class SAW_LMS_Activator {
 		self::add_capabilities();
 
 		// Flush rewrite rules - CRITICAL!
-		// NOTE: flush_rewrite_rules() negeneruje output.
 		flush_rewrite_rules();
 
 		// Set activation flag for deferred logging.
-		// CRITICAL: Toto je JEDINÝ způsob, jak "logovat" během aktivace!
-		// Logger se spustí až při prvním načtení admin stránky (viz class-saw-lms.php).
 		set_transient( 'saw_lms_activation_pending', true, 300 );
 	}
 
 	/**
 	 * Add custom capabilities to WordPress roles
-	 *
-	 * Adds capabilities for managing SAW LMS custom post types.
-	 * Based on SECURITY.md guidelines.
 	 *
 	 * @since 2.1.0
 	 * @return void
@@ -174,18 +139,12 @@ class SAW_LMS_Activator {
 		$admin->add_cap( 'delete_others_saw_quizzes' );
 		$admin->add_cap( 'edit_private_saw_quizzes' );
 		$admin->add_cap( 'edit_published_saw_quizzes' );
-
-		// TODO: Add capabilities for future roles (Instructor, Student).
-		// This will be implemented in Phase 2.2 when user roles are created.
 	}
 
 	/**
 	 * Create upload directories
 	 *
-	 * FIXED in v0.1.0: Removed output-generating code.
-	 *
 	 * @since 1.0.0
-	 * @version 0.1.0
 	 * @return void
 	 */
 	private static function create_upload_directories() {
@@ -202,12 +161,10 @@ class SAW_LMS_Activator {
 		);
 
 		foreach ( $directories as $dir ) {
-			// CRITICAL: wp_mkdir_p() negeneruje output, pouze vytvoří složku.
 			if ( ! file_exists( $dir ) ) {
 				wp_mkdir_p( $dir );
 
 				// Add index.php to prevent directory listing.
-				// NOTE: file_put_contents() negeneruje output.
 				$index_file = $dir . '/index.php';
 				if ( ! file_exists( $index_file ) ) {
 					file_put_contents( $index_file, '<?php // Silence is golden.' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
