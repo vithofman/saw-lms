@@ -1,0 +1,28 @@
+parameters:
+	level: 5
+	paths:
+		- includes/
+	excludePaths:
+		- includes/vendor/
+		- tests/
+	bootstrapFiles:
+		- saw-lms.php
+	scanDirectories:
+		- vendor/php-stubs/wordpress-stubs/
+	ignoreErrors:
+		- '#^Function wp_[a-z_]+ not found\.$#'
+		- '#^Function get_[a-z_]+ not found\.$#'
+		- '#^Function is_[a-z_]+ not found\.$#'
+		- '#^Function current_user_can not found\.$#'
+		- '#^Function add_[a-z_]+ not found\.$#'
+		- '#^Function do_[a-z_]+ not found\.$#'
+		- '#^Function apply_[a-z_]+ not found\.$#'
+		- '#^Constant WPINC not found\.$#'
+		- '#^Constant SAW_LMS_[A-Z_]+ not found\.$#'
+		- '#^Instantiated class SAW_LMS_[A-Za-z_]+ not found\.$#'
+		- '#^Call to method .* on an unknown class SAW_LMS_[A-Za-z_]+\.$#'
+		- '#Property .* is never read, only written#'
+		- '#Ternary operator condition is always true#'
+		- '#Left side of && is always true#'
+	reportUnmatchedIgnoredErrors: false
+	treatPhpDocTypesAsCertain: false

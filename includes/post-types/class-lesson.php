@@ -1,118 +1,40 @@
 <?php
 /**
- * Lesson Custom Post Type
- *
- * Handles registration and functionality for the Lesson CPT.
- * REFACTORED in v3.0.0: Config-based meta boxes using lesson-fields.php
+ * Lesson Post Type
  *
  * @package     SAW_LMS
  * @subpackage  Post_Types
- * @since       2.1.0
- * @version     3.0.0
+ * @since       1.0.0
  */
 
-// Exit if accessed directly.
 if ( ! defined( 'ABSPATH' ) ) {
-	exit;
+	die;
 }
 
 /**
- * SAW_LMS_Lesson Class
+ * SAW_LMS_Lesson class
  *
- * Manages the Lesson custom post type including registration,
- * meta boxes, admin columns, and lesson-specific functionality.
+ * Registers and manages the Lesson custom post type.
  *
- * UPDATED in v3.0.0: Refactored to use config-based meta boxes.
- *
- * @since 2.1.0
+ * @since 1.0.0
  */
 class SAW_LMS_Lesson {
 
 	/**
-	 * Post type slug
-	 *
-	 * @var string
-	 */
-	const POST_TYPE = 'saw_lesson';
-
-	/**
-	 * Lesson types
-	 *
-	 * @var array
-	 */
-	const LESSON_TYPES = array(
-		'video'      => 'Video',
-		'text'       => 'Text/Article',
-		'document'   => 'Document/PDF',
-		'assignment' => 'Assignment',
-	);
-
-	/**
-	 * Singleton instance
-	 *
-	 * @var SAW_LMS_Lesson|null
-	 */
-	private static $instance = null;
-
-	/**
-	 * Fields configuration
-	 *
-	 * Loaded from includes/config/lesson-fields.php
-	 *
-	 * @since 3.0.0
-	 * @var array
-	 */
-	private $fields_config = array();
-
-	/**
-	 * Get singleton instance
-	 *
-	 * @return SAW_LMS_Lesson
-	 */
-	public static function init() {
-		if ( null === self::$instance ) {
-			self::$instance = new self();
-		}
-		return self::$instance;
-	}
-
-	/**
 	 * Constructor
 	 *
-	 * Register hooks for the Lesson CPT.
-	 *
-	 * UPDATED in v3.0.0: Load fields config.
-	 *
-	 * @since 2.1.0
+	 * @since 1.0.0
 	 */
-	private function __construct() {
-		// Load fields configuration.
-		$config_file = SAW_LMS_PLUGIN_DIR . 'includes/config/lesson-fields.php';
-		if ( file_exists( $config_file ) ) {
-			$this->fields_config = include $config_file;
-		}
-
-		// Register post type.
+	public function __construct() {
 		add_action( 'init', array( $this, 'register_post_type' ) );
-
-		// Meta boxes.
 		add_action( 'add_meta_boxes', array( $this, 'add_meta_boxes' ) );
-		add_action( 'save_post_' . self::POST_TYPE, array( $this, 'save_meta_boxes' ), 10, 2 );
-
-		// Admin columns.
-		add_filter( 'manage_' . self::POST_TYPE . '_posts_columns', array( $this, 'add_admin_columns' ) );
-		add_action( 'manage_' . self::POST_TYPE . '_posts_custom_column', array( $this, 'render_admin_columns' ), 10, 2 );
-		add_filter( 'manage_edit-' . self::POST_TYPE . '_sortable_columns', array( $this, 'sortable_columns' ) );
-
-		// Admin assets.
-		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
+		add_action( 'save_post_saw_lms_lesson', array( $this, 'save_meta_boxes' ), 10, 2 );
 	}
 
 	/**
-	 * Register Lesson post type
+	 * Register lesson post type
 	 *
-	 * @since 2.1.0
-	 * @return void
+	 * @since 1.0.0
 	 */
 	public function register_post_type() {
 		$labels = array(
@@ -138,100 +60,105 @@ class SAW_LMS_Lesson {
 
 		$args = array(
 			'label'               => __( 'Lesson', 'saw-lms' ),
-			'description'         => __( 'SAW LMS Lessons', 'saw-lms' ),
+			'description'         => __( 'Course Lessons', 'saw-lms' ),
 			'labels'              => $labels,
 			'supports'            => array( 'title', 'editor', 'page-attributes' ),
-			'hierarchical'        => true,
+			'hierarchical'        => false,
 			'public'              => false,
 			'show_ui'             => true,
-			'show_in_menu'        => 'saw-lms',
-			'menu_position'       => 27,
-			'menu_icon'           => 'dashicons-welcome-learn-more',
+			'show_in_menu'        => 'edit.php?post_type=saw_lms_course',
 			'show_in_admin_bar'   => true,
 			'show_in_nav_menus'   => false,
 			'can_export'          => true,
 			'has_archive'         => false,
 			'exclude_from_search' => true,
 			'publicly_queryable'  => false,
-			'capability_type'     => array( 'saw_lesson', 'saw_lessons' ),
-			'map_meta_cap'        => true,
+			'capability_type'     => 'post',
 			'show_in_rest'        => true,
-			'rest_base'           => 'lessons',
 		);
 
-		register_post_type( self::POST_TYPE, $args );
+		register_post_type( 'saw_lms_lesson', $args );
 	}
 
 	/**
 	 * Add meta boxes
 	 *
-	 * REFACTORED in v3.0.0: Automatically creates meta boxes from config.
-	 *
-	 * @since 2.1.0
-	 * @return void
+	 * @since 1.0.0
 	 */
 	public function add_meta_boxes() {
-		// Loop through config and register each meta box.
-		foreach ( $this->fields_config as $box_id => $box_config ) {
-			add_meta_box(
-				'saw_lms_' . $box_id,
-				$box_config['title'],
-				array( $this, 'render_meta_box' ),
-				self::POST_TYPE,
-				isset( $box_config['context'] ) ? $box_config['context'] : 'normal',
-				isset( $box_config['priority'] ) ? $box_config['priority'] : 'default',
-				array(
-					'box_id' => $box_id,
-					'fields' => $box_config['fields'],
-				)
-			);
-		}
+		add_meta_box(
+			'saw_lms_lesson_details',
+			__( 'Lesson Details', 'saw-lms' ),
+			array( $this, 'render_lesson_details_meta_box' ),
+			'saw_lms_lesson',
+			'normal',
+			'high'
+		);
 	}
 
 	/**
-	 * Render meta box
+	 * Render lesson details meta box
 	 *
-	 * Universal rendering method using Meta Box Helper.
-	 *
-	 * @since 3.0.0
-	 * @param WP_Post $post    Current post object.
-	 * @param array   $metabox Meta box arguments.
-	 * @return void
+	 * @since 1.0.0
+	 * @param WP_Post $post Current post object.
 	 */
-	public function render_meta_box( $post, $metabox ) {
-		$fields = $metabox['args']['fields'];
+	public function render_lesson_details_meta_box( $post ) {
+		wp_nonce_field( 'saw_lms_lesson_details_nonce', 'saw_lms_lesson_details_nonce' );
 
-		// Nonce for security.
-		wp_nonce_field( 'saw_lms_lesson_meta', 'saw_lms_lesson_nonce' );
+		$lesson_type  = get_post_meta( $post->ID, '_saw_lms_lesson_type', true );
+		$video_url    = get_post_meta( $post->ID, '_saw_lms_video_url', true );
+		$video_length = get_post_meta( $post->ID, '_saw_lms_video_length', true );
 
-		echo '<div class="saw-lms-meta-box">';
+		?>
+		<div class="saw-lms-meta-box">
+			<p>
+				<label for="saw_lms_lesson_type"><?php esc_html_e( 'Lesson Type:', 'saw-lms' ); ?></label>
+				<select id="saw_lms_lesson_type" name="saw_lms_lesson_type" class="form-select">
+					<option value="text" <?php selected( $lesson_type, 'text' ); ?>><?php esc_html_e( 'Text', 'saw-lms' ); ?></option>
+					<option value="video" <?php selected( $lesson_type, 'video' ); ?>><?php esc_html_e( 'Video', 'saw-lms' ); ?></option>
+				</select>
+			</p>
 
-		// Render each field using helper.
-		foreach ( $fields as $key => $field ) {
-			$value = SAW_LMS_Meta_Box_Helper::get_field_value( $post->ID, $key, $field );
-			SAW_LMS_Meta_Box_Helper::render_field( $key, $field, $value );
-		}
+			<div id="saw_lms_video_fields" style="<?php echo 'video' !== $lesson_type ? 'display:none;' : ''; ?>">
+				<p>
+					<label for="saw_lms_video_url"><?php esc_html_e( 'Video URL:', 'saw-lms' ); ?></label>
+					<input type="url" id="saw_lms_video_url" name="saw_lms_video_url" class="form-input" value="<?php echo esc_url( $video_url ); ?>">
+				</p>
 
-		echo '</div>';
+				<p>
+					<label for="saw_lms_video_length"><?php esc_html_e( 'Video Length (minutes):', 'saw-lms' ); ?></label>
+					<input type="number" id="saw_lms_video_length" name="saw_lms_video_length" class="form-input" value="<?php echo esc_attr( $video_length ); ?>" min="0">
+				</p>
+			</div>
+		</div>
+
+		<script>
+		jQuery(document).ready(function($) {
+			$('#saw_lms_lesson_type').on('change', function() {
+				if ($(this).val() === 'video') {
+					$('#saw_lms_video_fields').show();
+				} else {
+					$('#saw_lms_video_fields').hide();
+				}
+			});
+		});
+		</script>
+		<?php
 	}
 
 	/**
-	 * Save meta box data
+	 * Save meta boxes
 	 *
-	 * REFACTORED in v3.0.0: Universal save method with sanitization.
-	 *
-	 * @since 2.1.0
+	 * @since 1.0.0
 	 * @param int     $post_id Post ID.
-	 * @param WP_Post $post    Post object.
-	 * @return void
+	 * @param WP_Post $post Post object.
 	 */
 	public function save_meta_boxes( $post_id, $post ) {
-		// Security checks.
-		if ( ! isset( $_POST['saw_lms_lesson_nonce'] ) ) {
+		if ( ! isset( $_POST['saw_lms_lesson_details_nonce'] ) ) {
 			return;
 		}
 
-		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['saw_lms_lesson_nonce'] ) ), 'saw_lms_lesson_meta' ) ) {
+		if ( ! wp_verify_nonce( $_POST['saw_lms_lesson_details_nonce'], 'saw_lms_lesson_details_nonce' ) ) {
 			return;
 		}
 
@@ -243,193 +170,19 @@ class SAW_LMS_Lesson {
 			return;
 		}
 
-		// Loop through all fields from config.
-		foreach ( $this->fields_config as $box_config ) {
-			foreach ( $box_config['fields'] as $key => $field ) {
-
-				// Skip readonly fields.
-				if ( ! empty( $field['readonly'] ) ) {
-					continue;
-				}
-
-				// Handle field value.
-				if ( isset( $_POST[ $key ] ) ) {
-					// Sanitize value based on field type.
-					$value = SAW_LMS_Meta_Box_Helper::sanitize_value(
-						wp_unslash( $_POST[ $key ] ),
-						$field['type']
-					);
-
-					update_post_meta( $post_id, $key, $value );
-				} else {
-					// Checkbox unchecked = empty string.
-					if ( 'checkbox' === $field['type'] ) {
-						update_post_meta( $post_id, $key, '' );
-					}
-				}
-			}
+		if ( isset( $_POST['saw_lms_lesson_type'] ) ) {
+			update_post_meta( $post_id, '_saw_lms_lesson_type', sanitize_text_field( $_POST['saw_lms_lesson_type'] ) );
 		}
 
-		// Invalidate lesson cache.
-		$section_id = get_post_meta( $post_id, '_saw_lms_section_id', true );
-		if ( $section_id ) {
-			wp_cache_delete( 'section_lessons_' . $section_id, 'saw_lms_sections' );
+		if ( isset( $_POST['saw_lms_video_url'] ) ) {
+			update_post_meta( $post_id, '_saw_lms_video_url', esc_url_raw( $_POST['saw_lms_video_url'] ) );
 		}
 
-		/**
-		 * Fires after lesson meta is saved.
-		 *
-		 * @since 2.1.0
-		 * @param int     $post_id Post ID.
-		 * @param WP_Post $post    Post object.
-		 */
-		do_action( 'saw_lms_lesson_meta_saved', $post_id, $post );
-	}
-
-	/**
-	 * Add admin columns
-	 *
-	 * @since 2.1.0
-	 * @param array $columns Existing columns.
-	 * @return array Modified columns.
-	 */
-	public function add_admin_columns( $columns ) {
-		// Remove date temporarily.
-		$date = $columns['date'];
-		unset( $columns['date'] );
-
-		// Add custom columns.
-		$columns['section']  = __( 'Section', 'saw-lms' );
-		$columns['type']     = __( 'Type', 'saw-lms' );
-		$columns['duration'] = __( 'Duration', 'saw-lms' );
-
-		// Re-add date.
-		$columns['date'] = $date;
-
-		return $columns;
-	}
-
-	/**
-	 * Render admin column content
-	 *
-	 * @since 2.1.0
-	 * @param string $column  Column name.
-	 * @param int    $post_id Post ID.
-	 * @return void
-	 */
-	public function render_admin_columns( $column, $post_id ) {
-		switch ( $column ) {
-			case 'section':
-				$section_id = get_post_meta( $post_id, '_saw_lms_section_id', true );
-				if ( $section_id ) {
-					$section = get_post( $section_id );
-					if ( $section ) {
-						$edit_link = get_edit_post_link( $section_id );
-						echo '<a href="' . esc_url( $edit_link ) . '">' . esc_html( $section->post_title ) . '</a>';
-					} else {
-						echo '—';
-					}
-				} else {
-					echo '—';
-				}
-				break;
-
-			case 'type':
-				$type = get_post_meta( $post_id, '_saw_lms_lesson_type', true );
-				if ( $type && isset( self::LESSON_TYPES[ $type ] ) ) {
-					echo '<span class="saw-lms-lesson-type saw-lms-type-' . esc_attr( $type ) . '">';
-					echo esc_html( self::LESSON_TYPES[ $type ] );
-					echo '</span>';
-				} else {
-					echo '—';
-				}
-				break;
-
-			case 'duration':
-				$duration = get_post_meta( $post_id, '_saw_lms_duration', true );
-				if ( ! empty( $duration ) ) {
-					/* translators: %s: duration in minutes */
-					printf( esc_html__( '%s min', 'saw-lms' ), esc_html( $duration ) );
-				} else {
-					echo '—';
-				}
-				break;
-		}
-	}
-
-	/**
-	 * Make columns sortable
-	 *
-	 * @since 2.1.0
-	 * @param array $columns Sortable columns.
-	 * @return array Modified sortable columns.
-	 */
-	public function sortable_columns( $columns ) {
-		$columns['duration'] = 'duration';
-		return $columns;
-	}
-
-	/**
-	 * Enqueue admin assets
-	 *
-	 * @since 2.1.0
-	 * @param string $hook Current admin page hook.
-	 * @return void
-	 */
-	public function enqueue_admin_assets( $hook ) {
-		// Only on lesson edit screen.
-		if ( 'post.php' !== $hook && 'post-new.php' !== $hook ) {
-			return;
+		if ( isset( $_POST['saw_lms_video_length'] ) ) {
+			update_post_meta( $post_id, '_saw_lms_video_length', absint( $_POST['saw_lms_video_length'] ) );
 		}
 
-		$screen = get_current_screen();
-		if ( ! $screen || self::POST_TYPE !== $screen->post_type ) {
-			return;
-		}
-
-		// Enqueue admin styles.
-		wp_enqueue_style(
-			'saw-lms-lesson-admin',
-			SAW_LMS_PLUGIN_URL . 'assets/css/admin/lesson.css',
-			array(),
-			SAW_LMS_VERSION
-		);
-
-		// Enqueue admin scripts.
-		wp_enqueue_script(
-			'saw-lms-lesson-admin',
-			SAW_LMS_PLUGIN_URL . 'assets/js/admin/lesson.js',
-			array( 'jquery' ),
-			SAW_LMS_VERSION,
-			true
-		);
-	}
-
-	/**
-	 * Get lesson by ID (helper method)
-	 *
-	 * @since 2.1.0
-	 * @param int $lesson_id Lesson post ID.
-	 * @return WP_Post|null Lesson post object or null.
-	 */
-	public static function get_lesson( $lesson_id ) {
-		$lesson = get_post( $lesson_id );
-
-		if ( ! $lesson || self::POST_TYPE !== $lesson->post_type ) {
-			return null;
-		}
-
-		return $lesson;
-	}
-
-	/**
-	 * Check if lesson exists
-	 *
-	 * @since 2.1.0
-	 * @param int $lesson_id Lesson post ID.
-	 * @return bool True if lesson exists, false otherwise.
-	 */
-	public static function lesson_exists( $lesson_id ) {
-		return null !== self::get_lesson( $lesson_id );
+		$lesson_model = SAW_LMS_Model_Loader::get_lesson_model();
+		$lesson_model->get_lesson( $post_id, true );
 	}
 }
