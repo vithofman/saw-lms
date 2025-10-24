@@ -5,9 +5,13 @@
  * Centralized error handling system that catches PHP errors, exceptions, and fatal errors.
  * Logs them to database and files, sends email notifications for critical errors.
  *
+ * EMERGENCY FIX v2.1.2: Added function_exists() check for wp_mail() to prevent fatal errors
+ * during early WordPress bootstrap.
+ *
  * @package    SAW_LMS
  * @subpackage SAW_LMS/includes/core
  * @since      1.0.0
+ * @version    2.1.2
  */
 
 // If this file is called directly, abort.
@@ -108,6 +112,8 @@ class SAW_LMS_Error_Handler {
 	/**
 	 * Setup error handlers
 	 *
+	 * UPDATED v2.1.2: Only setup handlers after WordPress is fully loaded
+	 *
 	 * @since 1.0.0
 	 */
 	public function setup_handlers() {
@@ -115,16 +121,24 @@ class SAW_LMS_Error_Handler {
 			return;
 		}
 
-		// Set custom error handler
-		set_error_handler( array( $this, 'handle_php_error' ) );
+		// ✅ CRITICAL FIX: Only register handlers after WordPress core functions are available
+		// This prevents "Call to undefined function wp_mail()" errors
+		add_action(
+			'plugins_loaded',
+			function () {
+				// Set custom error handler
+				set_error_handler( array( $this, 'handle_php_error' ) );
 
-		// Set custom exception handler
-		set_exception_handler( array( $this, 'handle_exception' ) );
+				// Set custom exception handler
+				set_exception_handler( array( $this, 'handle_exception' ) );
 
-		// Set shutdown function to catch fatal errors
-		register_shutdown_function( array( $this, 'handle_shutdown' ) );
+				// Set shutdown function to catch fatal errors
+				register_shutdown_function( array( $this, 'handle_shutdown' ) );
 
-		$this->handlers_setup = true;
+				$this->handlers_setup = true;
+			},
+			1 // Priority 1 - very early, but after WordPress core
+		);
 	}
 
 	/**
@@ -163,8 +177,8 @@ class SAW_LMS_Error_Handler {
 	/**
 	 * Handle uncaught exceptions
 	 *
-	 * @since 1.0.0
-	 * @param Exception|Throwable $exception The exception
+	 * @since  1.0.0
+	 * @param  Exception|Throwable $exception The exception
 	 */
 	public function handle_exception( $exception ) {
 		$context = array(
@@ -229,8 +243,8 @@ class SAW_LMS_Error_Handler {
 			$type = 'error';
 		}
 
-		// Get current user ID
-		$user_id = get_current_user_id();
+		// Get current user ID (safe to call early)
+		$user_id = function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0;
 
 		// Get IP address
 		$ip_address = $this->get_client_ip();
@@ -245,24 +259,31 @@ class SAW_LMS_Error_Handler {
 		$file = isset( $context['file'] ) ? $context['file'] : null;
 		$line = isset( $context['line'] ) ? $context['line'] : null;
 
-		// Insert into database
-		$table_name = $wpdb->prefix . 'saw_lms_error_log';
+		// Insert into database (safe - $wpdb is always available)
+		if ( isset( $wpdb ) ) {
+			$table_name = $wpdb->prefix . 'saw_lms_error_log';
 
-		$wpdb->insert(
-			$table_name,
-			array(
-				'error_type' => $type,
-				'message'    => $message,
-				'context'    => $context_json,
-				'file'       => $file,
-				'line'       => $line,
-				'user_id'    => $user_id ? $user_id : null,
-				'ip_address' => $ip_address,
-				'url'        => $url,
-				'created_at' => current_time( 'mysql' ),
-			),
-			array( '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%s' )
-		);
+			// Check if table exists before inserting
+			$table_exists = $wpdb->get_var( "SHOW TABLES LIKE '{$table_name}'" ) === $table_name;
+
+			if ( $table_exists ) {
+				$wpdb->insert(
+					$table_name,
+					array(
+						'error_type' => $type,
+						'message'    => $message,
+						'context'    => $context_json,
+						'file'       => $file,
+						'line'       => $line,
+						'user_id'    => $user_id ? $user_id : null,
+						'ip_address' => $ip_address,
+						'url'        => $url,
+						'created_at' => function_exists( 'current_time' ) ? current_time( 'mysql' ) : date( 'Y-m-d H:i:s' ),
+					),
+					array( '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%s' )
+				);
+			}
+		}
 
 		// Log to file if logger is available
 		if ( $this->logger && method_exists( $this->logger, 'log' ) ) {
@@ -278,12 +299,29 @@ class SAW_LMS_Error_Handler {
 	/**
 	 * Send email notification for critical errors
 	 *
+	 * CRITICAL FIX v2.1.2: Added function_exists() check for wp_mail()
+	 *
 	 * @since 1.0.0
 	 * @param string $type    Error type
 	 * @param string $message Error message
 	 * @param array  $context Error context
 	 */
 	private function send_critical_error_email( $type, $message, $context ) {
+		// ✅ CRITICAL FIX: Check if wp_mail() exists before calling it
+		// This prevents "Call to undefined function wp_mail()" fatal errors
+		if ( ! function_exists( 'wp_mail' ) ) {
+			// WordPress not fully loaded yet - log this and skip email
+			if ( $this->logger && method_exists( $this->logger, 'warning' ) ) {
+				$this->logger->warning( 'Cannot send critical error email - wp_mail() not available yet' );
+			}
+			return;
+		}
+
+		// Check if get_transient() exists (should be available if wp_mail() is)
+		if ( ! function_exists( 'get_transient' ) || ! function_exists( 'set_transient' ) ) {
+			return;
+		}
+
 		// Create transient key for this specific error message
 		$transient_key = 'saw_lms_critical_email_' . md5( $type . $message );
 
@@ -295,7 +333,7 @@ class SAW_LMS_Error_Handler {
 		// Set transient to prevent spam (1 hour)
 		set_transient( $transient_key, true, HOUR_IN_SECONDS );
 
-		// Get admin email
+		// Get admin email (safe - get_option() available if wp_mail() is)
 		$admin_email = get_option( 'admin_email' );
 
 		if ( empty( $admin_email ) ) {
@@ -305,8 +343,8 @@ class SAW_LMS_Error_Handler {
 		// Prepare email
 		$subject = sprintf(
 			'[%s] Critical Error: %s',
-			get_bloginfo( 'name' ),
-			wp_trim_words( $message, 10 )
+			function_exists( 'get_bloginfo' ) ? get_bloginfo( 'name' ) : 'SAW LMS',
+			function_exists( 'wp_trim_words' ) ? wp_trim_words( $message, 10 ) : substr( $message, 0, 50 )
 		);
 
 		$body = sprintf(
@@ -316,7 +354,7 @@ class SAW_LMS_Error_Handler {
 			"Time: %s\n\n",
 			strtoupper( $type ),
 			$message,
-			current_time( 'mysql' )
+			function_exists( 'current_time' ) ? current_time( 'mysql' ) : date( 'Y-m-d H:i:s' )
 		);
 
 		// Add context details
@@ -338,9 +376,9 @@ class SAW_LMS_Error_Handler {
 
 		$body .= "\n--\n";
 		$body .= "This is an automated message from SAW LMS Plugin.\n";
-		$body .= 'Site: ' . get_bloginfo( 'url' );
+		$body .= 'Site: ' . ( function_exists( 'get_bloginfo' ) ? get_bloginfo( 'url' ) : 'N/A' );
 
-		// Send email
+		// Send email (we already checked function_exists above)
 		wp_mail( $admin_email, $subject, $body );
 	}
 
@@ -363,7 +401,9 @@ class SAW_LMS_Error_Handler {
 
 		foreach ( $ip_keys as $key ) {
 			if ( isset( $_SERVER[ $key ] ) && filter_var( $_SERVER[ $key ], FILTER_VALIDATE_IP ) ) {
-				return sanitize_text_field( wp_unslash( $_SERVER[ $key ] ) );
+				return function_exists( 'sanitize_text_field' ) 
+					? sanitize_text_field( wp_unslash( $_SERVER[ $key ] ) )
+					: $_SERVER[ $key ];
 			}
 		}
 
@@ -378,8 +418,11 @@ class SAW_LMS_Error_Handler {
 	 */
 	private function get_current_url() {
 		if ( isset( $_SERVER['REQUEST_URI'] ) ) {
-			$url = esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) );
-			return home_url( $url );
+			if ( function_exists( 'esc_url_raw' ) && function_exists( 'home_url' ) ) {
+				$url = esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) );
+				return home_url( $url );
+			}
+			return $_SERVER['REQUEST_URI'];
 		}
 
 		return '';
@@ -427,53 +470,42 @@ class SAW_LMS_Error_Handler {
 
 		$table_name = $wpdb->prefix . 'saw_lms_error_log';
 
+		$where = '';
+		$args  = array();
+
 		if ( $type ) {
-			$errors = $wpdb->get_results(
-				$wpdb->prepare(
-					"SELECT * FROM {$table_name} 
-					WHERE error_type = %s 
-					ORDER BY created_at DESC 
-					LIMIT %d",
-					$type,
-					$limit
-				),
-				ARRAY_A
-			);
-		} else {
-			$errors = $wpdb->get_results(
-				$wpdb->prepare(
-					"SELECT * FROM {$table_name} 
-					ORDER BY created_at DESC 
-					LIMIT %d",
-					$limit
-				),
-				ARRAY_A
-			);
+			$where  = 'WHERE error_type = %s';
+			$args[] = $type;
 		}
 
-		return $errors;
+		$args[] = $limit;
+
+		$query = "SELECT * FROM {$table_name} {$where} ORDER BY created_at DESC LIMIT %d";
+
+		return $wpdb->get_results(
+			$wpdb->prepare( $query, $args ),
+			ARRAY_A
+		);
 	}
 
 	/**
 	 * Clear old error logs
 	 *
-	 * @since 1.0.0
-	 * @param int $days Delete logs older than X days
+	 * @since  1.0.0
+	 * @param  int $days Keep errors from last X days
 	 * @return int Number of deleted rows
 	 */
-	public function clear_old_logs( $days = 30 ) {
+	public function clear_old_errors( $days = 30 ) {
 		global $wpdb;
 
 		$table_name = $wpdb->prefix . 'saw_lms_error_log';
-		$date_limit = date( 'Y-m-d H:i:s', strtotime( "-{$days} days" ) );
+		$date_from  = date( 'Y-m-d H:i:s', strtotime( "-{$days} days" ) );
 
-		$deleted = $wpdb->query(
+		return $wpdb->query(
 			$wpdb->prepare(
 				"DELETE FROM {$table_name} WHERE created_at < %s",
-				$date_limit
+				$date_from
 			)
 		);
-
-		return $deleted;
 	}
 }
