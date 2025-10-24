@@ -1,10 +1,14 @@
 /**
- * Tabbed Meta Box Styles
+ * Tabbed Meta Box Styles - FIXED v3.2.3
+ *
+ * CRITICAL FIX: Added !important to override WooCommerce CSS conflicts
+ * Problem: WooCommerce was setting .saw-tabs-content { display: none; }
+ * Solution: Stronger selectors + !important on critical properties
  *
  * @package    SAW_LMS
  * @subpackage Assets/CSS/Admin
  * @since      3.1.0
- * @version    3.1.0
+ * @version    3.2.3
  */
 
 /* ============================================
@@ -12,10 +16,13 @@
    ============================================ */
 
 .saw-tabs-wrapper {
-	background: #fff;
-	border: 1px solid #c3c4c7;
-	border-radius: 4px;
-	margin-top: 10px;
+	background: #fff !important;
+	border: 1px solid #c3c4c7 !important;
+	border-radius: 4px !important;
+	margin-top: 10px !important;
+	display: block !important; /* Force visibility */
+	visibility: visible !important;
+	opacity: 1 !important;
 }
 
 /* ============================================
@@ -23,66 +30,82 @@
    ============================================ */
 
 .saw-tabs-nav {
-	display: flex;
-	gap: 0;
-	background: #f0f0f1;
-	border-bottom: 1px solid #c3c4c7;
-	padding: 0;
-	margin: 0;
+	display: flex !important;
+	gap: 0 !important;
+	background: #f0f0f1 !important;
+	border-bottom: 1px solid #c3c4c7 !important;
+	padding: 0 !important;
+	margin: 0 !important;
+	visibility: visible !important;
+	opacity: 1 !important;
 }
 
 .saw-tab-button {
-	flex: 0 0 auto;
-	background: transparent;
-	border: none;
-	border-right: 1px solid #c3c4c7;
-	padding: 12px 24px;
-	font-size: 14px;
-	font-weight: 500;
-	color: #50575e;
-	cursor: pointer;
-	transition: all 0.2s ease;
-	position: relative;
+	flex: 0 0 auto !important;
+	background: transparent !important;
+	border: none !important;
+	border-right: 1px solid #c3c4c7 !important;
+	padding: 12px 24px !important;
+	font-size: 14px !important;
+	font-weight: 500 !important;
+	color: #50575e !important;
+	cursor: pointer !important;
+	transition: all 0.2s ease !important;
+	position: relative !important;
+	display: block !important;
+	visibility: visible !important;
+	opacity: 1 !important;
 }
 
 .saw-tab-button:last-child {
-	border-right: none;
+	border-right: none !important;
 }
 
 .saw-tab-button:hover {
-	background: #fff;
-	color: #2271b1;
+	background: #fff !important;
+	color: #2271b1 !important;
 }
 
 .saw-tab-button.saw-tab-active {
-	background: #fff;
-	color: #2271b1;
-	border-bottom: 3px solid #2271b1;
-	margin-bottom: -1px;
+	background: #fff !important;
+	color: #2271b1 !important;
+	border-bottom: 3px solid #2271b1 !important;
+	margin-bottom: -1px !important;
 }
 
 .saw-tab-button:focus {
-	outline: 2px solid #2271b1;
-	outline-offset: -2px;
-	box-shadow: none;
+	outline: 2px solid #2271b1 !important;
+	outline-offset: -2px !important;
+	box-shadow: none !important;
 }
 
 /* ============================================
-   TABS CONTENT
+   TABS CONTENT - CRITICAL FIX!
    ============================================ */
 
 .saw-tabs-content {
-	padding: 20px;
-	background: #fff;
+	padding: 20px !important;
+	background: #fff !important;
+	/* CRITICAL: Override WooCommerce display: none */
+	display: block !important;
+	visibility: visible !important;
+	opacity: 1 !important;
+	min-height: 50px !important;
 }
 
 .saw-tab-content {
-	display: none;
+	/* Hidden by default */
+	display: none !important;
+	/* Animation when shown */
 	animation: fadeIn 0.3s ease-in-out;
 }
 
+/* CRITICAL: Active tab MUST be visible! */
 .saw-tab-content.saw-tab-content-active {
-	display: block;
+	display: block !important;
+	visibility: visible !important;
+	opacity: 1 !important;
+	min-height: 20px !important;
 }
 
 @keyframes fadeIn {
@@ -97,44 +120,58 @@
 }
 
 /* ============================================
-   FIELD GROUPS (from components.css)
+   FIELD GROUPS - CRITICAL FIX!
    ============================================ */
 
 .saw-field-group {
-	margin-bottom: 20px;
-	padding-bottom: 20px;
-	border-bottom: 1px solid #f0f0f1;
+	margin-bottom: 20px !important;
+	padding-bottom: 20px !important;
+	border-bottom: 1px solid #f0f0f1 !important;
+	/* CRITICAL: Ensure fields are visible */
+	display: block !important;
+	visibility: visible !important;
+	opacity: 1 !important;
+	min-height: 20px !important;
+	width: 100% !important;
 }
 
 .saw-field-group:last-child {
-	border-bottom: none;
-	margin-bottom: 0;
-	padding-bottom: 0;
+	border-bottom: none !important;
+	margin-bottom: 0 !important;
+	padding-bottom: 0 !important;
 }
 
 .saw-field-label {
-	display: block;
-	font-weight: 600;
-	margin-bottom: 8px;
-	color: #1d2327;
-	font-size: 14px;
+	display: block !important;
+	font-weight: 600 !important;
+	margin-bottom: 8px !important;
+	color: #1d2327 !important;
+	font-size: 14px !important;
+	visibility: visible !important;
+	opacity: 1 !important;
 }
 
 .saw-field-label .required {
-	color: #d63638;
-	font-weight: bold;
+	color: #d63638 !important;
+	font-weight: bold !important;
 }
 
 .saw-field-input {
-	margin-bottom: 6px;
+	margin-bottom: 6px !important;
+	display: block !important;
+	visibility: visible !important;
+	opacity: 1 !important;
 }
 
 .saw-field-description {
-	margin: 6px 0 0 0;
-	color: #646970;
-	font-size: 13px;
-	font-style: italic;
-	line-height: 1.5;
+	margin: 6px 0 0 0 !important;
+	color: #646970 !important;
+	font-size: 13px !important;
+	font-style: italic !important;
+	line-height: 1.5 !important;
+	display: block !important;
+	visibility: visible !important;
+	opacity: 1 !important;
 }
 
 /* ============================================
@@ -142,30 +179,39 @@
    ============================================ */
 
 .saw-field-heading {
-	margin: 30px 0 20px 0;
-	padding: 15px 0;
-	border-top: 2px solid #2271b1;
-	border-bottom: 1px solid #c3c4c7;
+	margin: 30px 0 20px 0 !important;
+	padding: 15px 0 !important;
+	border-top: 2px solid #2271b1 !important;
+	border-bottom: 1px solid #c3c4c7 !important;
+	display: block !important;
+	visibility: visible !important;
+	opacity: 1 !important;
 }
 
 .saw-field-heading:first-child {
-	margin-top: 0;
-	border-top: none;
+	margin-top: 0 !important;
+	border-top: none !important;
 }
 
 .saw-field-heading h3 {
-	margin: 0 0 8px 0;
-	padding: 0;
-	font-size: 16px;
-	font-weight: 600;
-	color: #2271b1;
+	margin: 0 0 8px 0 !important;
+	padding: 0 !important;
+	font-size: 16px !important;
+	font-weight: 600 !important;
+	color: #2271b1 !important;
+	display: block !important;
+	visibility: visible !important;
+	opacity: 1 !important;
 }
 
 .saw-field-heading .description {
-	margin: 0;
-	color: #646970;
-	font-size: 13px;
-	font-style: italic;
+	margin: 0 !important;
+	color: #646970 !important;
+	font-size: 13px !important;
+	font-style: italic !important;
+	display: block !important;
+	visibility: visible !important;
+	opacity: 1 !important;
 }
 
 /* ============================================
@@ -173,49 +219,82 @@
    ============================================ */
 
 .saw-readonly-value {
-	background: #f0f0f1;
-	border: 1px solid #c3c4c7;
-	border-radius: 4px;
-	padding: 10px 12px;
-	color: #1d2327;
-	font-family: monospace;
-	font-size: 14px;
+	background: #f0f0f1 !important;
+	border: 1px solid #c3c4c7 !important;
+	border-radius: 4px !important;
+	padding: 10px 12px !important;
+	color: #1d2327 !important;
+	font-family: monospace !important;
+	font-size: 14px !important;
+	display: block !important;
+	visibility: visible !important;
+	opacity: 1 !important;
 }
 
 /* ============================================
    FORM INPUTS (ensure compatibility)
    ============================================ */
 
-.form-input,
-.form-select,
-.form-textarea {
+.saw-field-input .form-input,
+.saw-field-input .form-select,
+.saw-field-input .form-textarea,
+.saw-field-input input[type="text"],
+.saw-field-input input[type="number"],
+.saw-field-input input[type="email"],
+.saw-field-input input[type="url"],
+.saw-field-input input[type="date"],
+.saw-field-input select,
+.saw-field-input textarea {
 	width: 100%;
 	max-width: 500px;
+	display: block !important;
+	visibility: visible !important;
+	opacity: 1 !important;
 }
 
-.form-input[type="number"] {
+.saw-field-input input[type="number"] {
 	max-width: 150px;
 }
 
-.form-input[type="date"] {
+.saw-field-input input[type="date"] {
 	max-width: 200px;
 }
 
 .form-checkbox,
 .form-radio {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	margin-bottom: 8px;
+	display: flex !important;
+	align-items: center !important;
+	gap: 8px !important;
+	margin-bottom: 8px !important;
+	visibility: visible !important;
+	opacity: 1 !important;
 }
 
 .form-checkbox input,
 .form-radio input {
-	margin: 0;
+	margin: 0 !important;
+	display: inline-block !important;
+	visibility: visible !important;
+	opacity: 1 !important;
 }
 
 .form-checkbox span,
 .form-radio span {
-	margin: 0;
-	line-height: 1.4;
+	margin: 0 !important;
+	line-height: 1.4 !important;
+	display: inline-block !important;
+	visibility: visible !important;
+	opacity: 1 !important;
 }
+
+/* ============================================
+   DEBUGGING HELPER (Remove after fixing)
+   ============================================ */
+
+/* Uncomment this temporarily to see if fields exist:
+.saw-field-group {
+	background: yellow !important;
+	border: 3px solid red !important;
+	min-height: 50px !important;
+}
+*/

@@ -319,28 +319,7 @@ class SAW_LMS_Course {
 		// Calculate stats for Stats tab.
 		$this->calculate_course_stats( $post->ID );
 
-		// DEBUG: Show what's being passed to Helper.
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			echo '<pre style="background: #f0f0f0; padding: 10px; margin: 10px 0; border: 1px solid #ccc;">';
-			echo 'TABS CONFIG DEBUG:' . "\n";
-			echo 'Number of tabs: ' . count( $this->tabs_config ) . "\n\n";
-
-			foreach ( $this->tabs_config as $tab_id => $tab_config ) {
-				echo "Tab: {$tab_id}\n";
-				echo "Label: {$tab_config['label']}\n";
-				echo 'Fields count: ' . ( isset( $tab_config['fields'] ) ? count( $tab_config['fields'] ) : 0 ) . "\n";
-
-				if ( 'settings' === $tab_id && isset( $tab_config['fields'] ) ) {
-					echo "First 3 field keys:\n";
-					$keys = array_keys( $tab_config['fields'] );
-					foreach ( array_slice( $keys, 0, 3 ) as $key ) {
-						echo "  - {$key}\n";
-					}
-				}
-				echo "\n";
-			}
-			echo '</pre>';
-		}
+		
 
 		// Render tabs.
 		SAW_LMS_Meta_Box_Helper::render_tabbed_meta_box( $post->ID, $this->tabs_config );
