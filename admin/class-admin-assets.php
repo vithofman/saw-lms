@@ -5,10 +5,12 @@
  * Správné načítání CSS a JavaScript souborů pro admin rozhraní.
  * Všechny assety jsou načteny pouze v admin oblasti.
  *
+ * UPDATED in v3.1.4: Added tabs.css and tabs.js for Course CPT meta boxes.
+ *
  * @package    SAW_LMS
  * @subpackage SAW_LMS/admin
  * @since      1.0.0
- * @version    2.5.0
+ * @version    3.1.4
  */
 
 // If this file is called directly, abort.
@@ -45,8 +47,8 @@ class SAW_LMS_Admin_Assets {
 	 * Initialize the class
 	 *
 	 * @since 1.0.0
-	 * @param string $plugin_name Plugin name
-	 * @param string $version     Plugin version
+	 * @param string $plugin_name Plugin name.
+	 * @param string $version     Plugin version.
 	 */
 	public function __construct( $plugin_name, $version ) {
 		$this->plugin_name = $plugin_name;
@@ -60,20 +62,21 @@ class SAW_LMS_Admin_Assets {
 	 * 1. Variables (CSS proměnné)
 	 * 2. Utilities (utility třídy)
 	 * 3. Components (UI komponenty)
-	 * 4. Layouts (page layouts)
-	 * 5. Admin Menu (Phase 2.5)
+	 * 4. Tabs (tabbed meta boxes)
+	 * 5. Layouts (page layouts)
+	 * 6. Admin Menu (Phase 2.5)
 	 *
 	 * @since 1.0.0
 	 */
 	public function enqueue_styles() {
-		// Check if we're in admin area and on SAW LMS pages
+		// Check if we're in admin area and on SAW LMS pages.
 		if ( ! $this->should_load_assets() ) {
 			return;
 		}
 
 		$assets_url = SAW_LMS_PLUGIN_URL . 'assets/css/admin/';
 
-		// 1. Variables - MUST be first
+		// 1. Variables - MUST be first.
 		wp_enqueue_style(
 			$this->plugin_name . '-admin-variables',
 			$assets_url . 'variables.css',
@@ -82,7 +85,7 @@ class SAW_LMS_Admin_Assets {
 			'all'
 		);
 
-		// 2. Utilities
+		// 2. Utilities.
 		wp_enqueue_style(
 			$this->plugin_name . '-admin-utilities',
 			$assets_url . 'utilities.css',
@@ -91,7 +94,7 @@ class SAW_LMS_Admin_Assets {
 			'all'
 		);
 
-		// 3. Components
+		// 3. Components.
 		wp_enqueue_style(
 			$this->plugin_name . '-admin-components',
 			$assets_url . 'components.css',
@@ -103,7 +106,19 @@ class SAW_LMS_Admin_Assets {
 			'all'
 		);
 
-		// 4. Layouts
+		// 4. Tabs (NEW in v3.1.4) - for tabbed meta boxes in Course CPT.
+		wp_enqueue_style(
+			$this->plugin_name . '-admin-tabs',
+			$assets_url . 'tabs.css',
+			array(
+				$this->plugin_name . '-admin-variables',
+				$this->plugin_name . '-admin-components',
+			),
+			$this->version,
+			'all'
+		);
+
+		// 5. Layouts.
 		wp_enqueue_style(
 			$this->plugin_name . '-admin-layouts',
 			$assets_url . 'layouts.css',
@@ -116,7 +131,7 @@ class SAW_LMS_Admin_Assets {
 			'all'
 		);
 
-		// 5. Admin Menu Styling (Phase 2.5)
+		// 6. Admin Menu Styling (Phase 2.5).
 		wp_enqueue_style(
 			$this->plugin_name . '-admin-menu',
 			$assets_url . 'admin-menu.css',
@@ -132,40 +147,49 @@ class SAW_LMS_Admin_Assets {
 	 * @since 1.0.0
 	 */
 	public function enqueue_scripts() {
-		// Check if we're in admin area and on SAW LMS pages
+		// Check if we're in admin area and on SAW LMS pages.
 		if ( ! $this->should_load_assets() ) {
 			return;
 		}
 
 		$assets_url = SAW_LMS_PLUGIN_URL . 'assets/js/admin/';
 
-		// Admin utilities - vanilla JavaScript
+		// Admin utilities - vanilla JavaScript.
 		wp_enqueue_script(
 			$this->plugin_name . '-admin-utilities',
 			$assets_url . 'utilities.js',
-			array(), // NO jQuery dependency - pure vanilla JS
+			array(), // NO jQuery dependency - pure vanilla JS.
 			$this->version,
-			true // Load in footer
+			true // Load in footer.
 		);
 
-		// Localize script with AJAX data
+		// Tabs JS (NEW in v3.1.4) - requires jQuery.
+		wp_enqueue_script(
+			$this->plugin_name . '-admin-tabs',
+			$assets_url . 'tabs.js',
+			array( 'jquery' ),
+			$this->version,
+			true // Load in footer.
+		);
+
+		// Localize script with AJAX data.
 		wp_localize_script(
 			$this->plugin_name . '-admin-utilities',
 			'sawLmsAdmin',
 			array(
-				'ajaxUrl'     => admin_url( 'admin-ajax.php' ),
-				'nonce'       => wp_create_nonce( 'saw_lms_admin_nonce' ),
-				'pluginUrl'   => SAW_LMS_PLUGIN_URL,
-				'version'     => $this->version,
-				'i18n'        => array(
-					'error'           => __( 'Error', 'saw-lms' ),
-					'success'         => __( 'Success', 'saw-lms' ),
-					'loading'         => __( 'Loading...', 'saw-lms' ),
-					'confirmDelete'   => __( 'Are you sure you want to delete this?', 'saw-lms' ),
-					'saved'           => __( 'Changes saved successfully', 'saw-lms' ),
-					'saveFailed'      => __( 'Failed to save changes', 'saw-lms' ),
-					'tryAgain'        => __( 'Please try again', 'saw-lms' ),
-					'networkError'    => __( 'Network error. Please check your connection.', 'saw-lms' ),
+				'ajaxUrl'   => admin_url( 'admin-ajax.php' ),
+				'nonce'     => wp_create_nonce( 'saw_lms_admin_nonce' ),
+				'pluginUrl' => SAW_LMS_PLUGIN_URL,
+				'version'   => $this->version,
+				'i18n'      => array(
+					'error'         => __( 'Error', 'saw-lms' ),
+					'success'       => __( 'Success', 'saw-lms' ),
+					'loading'       => __( 'Loading...', 'saw-lms' ),
+					'confirmDelete' => __( 'Are you sure you want to delete this?', 'saw-lms' ),
+					'saved'         => __( 'Changes saved successfully', 'saw-lms' ),
+					'saveFailed'    => __( 'Failed to save changes', 'saw-lms' ),
+					'tryAgain'      => __( 'Please try again', 'saw-lms' ),
+					'networkError'  => __( 'Network error. Please check your connection.', 'saw-lms' ),
 				),
 			)
 		);
@@ -178,30 +202,30 @@ class SAW_LMS_Admin_Assets {
 	 * pro optimalizaci výkonu.
 	 *
 	 * @since  1.0.0
-	 * @return bool True if assets should be loaded
+	 * @return bool True if assets should be loaded.
 	 */
 	private function should_load_assets() {
-		// Check if we're in admin
+		// Check if we're in admin.
 		if ( ! is_admin() ) {
 			return false;
 		}
 
-		// Get current screen
+		// Get current screen.
 		$screen = get_current_screen();
-		
+
 		if ( ! $screen ) {
 			return false;
 		}
 
-		// Load on all SAW LMS pages
-		// Check if page parameter starts with 'saw-lms'
+		// Load on all SAW LMS pages.
+		// Check if page parameter starts with 'saw-lms'.
 		$page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
-		
+
 		if ( strpos( $page, 'saw-lms' ) === 0 ) {
 			return true;
 		}
 
-		// Load on SAW LMS post type screens (když budou vytvořeny v Fázi 2)
+		// Load on SAW LMS post type screens.
 		if ( isset( $screen->post_type ) ) {
 			$saw_post_types = array(
 				'saw_course',
@@ -209,13 +233,13 @@ class SAW_LMS_Admin_Assets {
 				'saw_lesson',
 				'saw_quiz',
 			);
-			
+
 			if ( in_array( $screen->post_type, $saw_post_types, true ) ) {
 				return true;
 			}
 		}
 
-		// Don't load on other pages
+		// Don't load on other pages.
 		return false;
 	}
 
@@ -225,8 +249,8 @@ class SAW_LMS_Admin_Assets {
 	 * Přidáme CSS třídy na body tag v admin pro lepší styling.
 	 *
 	 * @since  1.0.0
-	 * @param  string $classes Current body classes
-	 * @return string Modified body classes
+	 * @param  string $classes Current body classes.
+	 * @return string Modified body classes.
 	 */
 	public function add_admin_body_class( $classes ) {
 		if ( ! $this->should_load_assets() ) {
@@ -250,9 +274,9 @@ class SAW_LMS_Admin_Assets {
 			return;
 		}
 
-		// Možnost pro budoucí customizaci barev přes Settings
+		// Možnost pro budoucí customizaci barev přes Settings.
 		$custom_primary_color = get_option( 'saw_lms_primary_color', '' );
-		
+
 		if ( ! empty( $custom_primary_color ) ) {
 			echo '<style id="saw-lms-custom-vars">';
 			echo ':root { --saw-primary: ' . esc_attr( $custom_primary_color ) . '; }';
@@ -294,7 +318,7 @@ class SAW_LMS_Admin_Assets {
 			return;
 		}
 
-		// Remove all notices except our own
+		// Remove all notices except our own.
 		remove_all_actions( 'admin_notices' );
 		remove_all_actions( 'all_admin_notices' );
 	}
@@ -307,20 +331,20 @@ class SAW_LMS_Admin_Assets {
 	 * @since 1.0.0
 	 */
 	public function init_hooks() {
-		// Enqueue styles and scripts
+		// Enqueue styles and scripts.
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_styles' ), 10 );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ), 10 );
 
-		// Add custom CSS vars
+		// Add custom CSS vars.
 		add_action( 'admin_head', array( $this, 'print_custom_css_vars' ) );
 
-		// Add menu icon CSS
+		// Add menu icon CSS.
 		add_action( 'admin_head', array( $this, 'add_menu_icon_css' ) );
 
-		// Add body class
+		// Add body class.
 		add_filter( 'admin_body_class', array( $this, 'add_admin_body_class' ) );
 
-		// Hide unrelated notices (optional - uncomment if needed)
+		// Hide unrelated notices (optional - uncomment if needed).
 		// add_action( 'admin_head', array( $this, 'hide_unrelated_notices' ), 1 );
 	}
 }

@@ -6,11 +6,12 @@
  * REFACTORED in v3.1.0: Tabbed meta boxes using config files.
  * REFACTORED in v3.1.1: Difficulty as meta field instead of taxonomy.
  * FIXED in v3.1.2: Added debugging for tabs configuration.
+ * FIXED in v3.1.4: Removed enqueue_admin_assets() - now handled centrally by class-admin-assets.php
  *
  * @package     SAW_LMS
  * @subpackage  Post_Types
  * @since       2.1.0
- * @version     3.1.2
+ * @version     3.1.4
  */
 
 // Exit if accessed directly.
@@ -26,6 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * UPDATED in v3.1.1: Difficulty is now a meta field, not taxonomy.
  * FIXED in v3.1.2: Added debugging and validation for tabs config.
+ * FIXED in v3.1.4: Removed duplicate asset enqueueing.
  *
  * @since 2.1.0
  */
@@ -73,6 +75,7 @@ class SAW_LMS_Course {
 	 * Register hooks for the Course CPT.
 	 *
 	 * UPDATED in v3.1.0: Load tabs config.
+	 * UPDATED in v3.1.4: Removed enqueue hook.
 	 *
 	 * @since 2.1.0
 	 */
@@ -95,8 +98,7 @@ class SAW_LMS_Course {
 		add_action( 'manage_' . self::POST_TYPE . '_posts_custom_column', array( $this, 'render_admin_columns' ), 10, 2 );
 		add_filter( 'manage_edit-' . self::POST_TYPE . '_sortable_columns', array( $this, 'sortable_columns' ) );
 
-		// Admin styles.
-		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
+		// NOTE: Admin assets are now handled centrally by class-admin-assets.php (v3.1.4).
 	}
 
 	/**
@@ -190,6 +192,8 @@ class SAW_LMS_Course {
 	/**
 	 * Register Course post type
 	 *
+	 * UPDATED in v3.1.4: Changed show_in_menu to false (menu managed by class-admin-menu.php).
+	 *
 	 * @since 2.1.0
 	 * @return void
 	 */
@@ -221,17 +225,17 @@ class SAW_LMS_Course {
 			'labels'              => $labels,
 			'supports'            => array( 'title', 'editor', 'thumbnail', 'page-attributes' ),
 			'hierarchical'        => true,
-			'public'              => true,
+			'public'              => false,
 			'show_ui'             => true,
-			'show_in_menu'        => 'saw-lms',
+			'show_in_menu'        => false, // Menu handled by class-admin-menu.php.
 			'menu_position'       => 25,
-			'menu_icon'           => 'dashicons-book',
+			'menu_icon'           => 'dashicons-welcome-learn-more',
 			'show_in_admin_bar'   => true,
-			'show_in_nav_menus'   => true,
+			'show_in_nav_menus'   => false,
 			'can_export'          => true,
-			'has_archive'         => true,
-			'exclude_from_search' => false,
-			'publicly_queryable'  => true,
+			'has_archive'         => false,
+			'exclude_from_search' => true,
+			'publicly_queryable'  => false,
 			'capability_type'     => array( 'saw_course', 'saw_courses' ),
 			'map_meta_cap'        => true,
 			'show_in_rest'        => true,
@@ -242,9 +246,7 @@ class SAW_LMS_Course {
 	}
 
 	/**
-	 * Register Course taxonomies
-	 *
-	 * UPDATED in v3.1.1: Removed difficulty taxonomy (now meta field).
+	 * Register taxonomies
 	 *
 	 * @since 2.1.0
 	 * @return void
@@ -311,38 +313,38 @@ class SAW_LMS_Course {
 	 * @return void
 	 */
 	public function render_tabbed_meta_box( $post ) {
-    // Nonce for security.
-    wp_nonce_field( 'saw_lms_course_meta', 'saw_lms_course_nonce' );
+		// Nonce for security.
+		wp_nonce_field( 'saw_lms_course_meta', 'saw_lms_course_nonce' );
 
-    // Calculate stats for Stats tab.
-    $this->calculate_course_stats( $post->ID );
+		// Calculate stats for Stats tab.
+		$this->calculate_course_stats( $post->ID );
 
-    // DEBUG: Show what's being passed to Helper
-    if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-        echo '<pre style="background: #f0f0f0; padding: 10px; margin: 10px 0; border: 1px solid #ccc;">';
-        echo 'TABS CONFIG DEBUG:' . "\n";
-        echo 'Number of tabs: ' . count( $this->tabs_config ) . "\n\n";
-        
-        foreach ( $this->tabs_config as $tab_id => $tab_config ) {
-            echo "Tab: {$tab_id}\n";
-            echo "Label: {$tab_config['label']}\n";
-            echo "Fields count: " . ( isset( $tab_config['fields'] ) ? count( $tab_config['fields'] ) : 0 ) . "\n";
-            
-            if ( 'settings' === $tab_id && isset( $tab_config['fields'] ) ) {
-                echo "First 3 field keys:\n";
-                $keys = array_keys( $tab_config['fields'] );
-                foreach ( array_slice( $keys, 0, 3 ) as $key ) {
-                    echo "  - {$key}\n";
-                }
-            }
-            echo "\n";
-        }
-        echo '</pre>';
-    }
+		// DEBUG: Show what's being passed to Helper.
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			echo '<pre style="background: #f0f0f0; padding: 10px; margin: 10px 0; border: 1px solid #ccc;">';
+			echo 'TABS CONFIG DEBUG:' . "\n";
+			echo 'Number of tabs: ' . count( $this->tabs_config ) . "\n\n";
 
-    // Render tabs.
-    SAW_LMS_Meta_Box_Helper::render_tabbed_meta_box( $post->ID, $this->tabs_config );
-}
+			foreach ( $this->tabs_config as $tab_id => $tab_config ) {
+				echo "Tab: {$tab_id}\n";
+				echo "Label: {$tab_config['label']}\n";
+				echo 'Fields count: ' . ( isset( $tab_config['fields'] ) ? count( $tab_config['fields'] ) : 0 ) . "\n";
+
+				if ( 'settings' === $tab_id && isset( $tab_config['fields'] ) ) {
+					echo "First 3 field keys:\n";
+					$keys = array_keys( $tab_config['fields'] );
+					foreach ( array_slice( $keys, 0, 3 ) as $key ) {
+						echo "  - {$key}\n";
+					}
+				}
+				echo "\n";
+			}
+			echo '</pre>';
+		}
+
+		// Render tabs.
+		SAW_LMS_Meta_Box_Helper::render_tabbed_meta_box( $post->ID, $this->tabs_config );
+	}
 
 	/**
 	 * Calculate course statistics
@@ -358,7 +360,7 @@ class SAW_LMS_Course {
 
 		// Check if enrollments table exists.
 		$table_name = $wpdb->prefix . 'saw_lms_enrollments';
-		
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$table_exists = $wpdb->get_var(
 			$wpdb->prepare(
@@ -414,10 +416,9 @@ class SAW_LMS_Course {
 	}
 
 	/**
-	 * Save meta box data
+	 * Save meta boxes
 	 *
-	 * REFACTORED in v3.1.0: Universal save method with sanitization.
-	 * UPDATED in v3.1.1: Difficulty saved as meta field.
+	 * REFACTORED in v3.1.0: Universal save method using tabs config.
 	 *
 	 * @since 2.1.0
 	 * @param int     $post_id Post ID.
@@ -442,26 +443,20 @@ class SAW_LMS_Course {
 			return;
 		}
 
-		// Loop through all tabs and save fields.
-		foreach ( $this->tabs_config as $tab_id => $tab_config ) {
-			// Skip Stats tab (read-only).
-			if ( 'stats' === $tab_id ) {
-				continue;
-			}
-
-			// Skip if no fields in tab.
-			if ( empty( $tab_config['fields'] ) || ! is_array( $tab_config['fields'] ) ) {
+		// Loop through all tabs and fields.
+		foreach ( $this->tabs_config as $tab_config ) {
+			if ( empty( $tab_config['fields'] ) ) {
 				continue;
 			}
 
 			foreach ( $tab_config['fields'] as $key => $field ) {
-				// Skip fields that are not actual form fields (like 'heading').
-				if ( isset( $field['type'] ) && 'heading' === $field['type'] ) {
+				// Skip readonly fields.
+				if ( ! empty( $field['readonly'] ) ) {
 					continue;
 				}
 
-				// Skip readonly fields.
-				if ( ! empty( $field['readonly'] ) ) {
+				// Skip heading fields (they're not actual inputs).
+				if ( isset( $field['type'] ) && 'heading' === $field['type'] ) {
 					continue;
 				}
 
@@ -470,7 +465,7 @@ class SAW_LMS_Course {
 					// Sanitize value based on field type.
 					$value = SAW_LMS_Meta_Box_Helper::sanitize_value(
 						wp_unslash( $_POST[ $key ] ),
-						$field['type']
+						isset( $field['type'] ) ? $field['type'] : 'text'
 					);
 
 					update_post_meta( $post_id, $key, $value );
@@ -484,7 +479,7 @@ class SAW_LMS_Course {
 		}
 
 		// Invalidate course cache.
-		wp_cache_delete( 'course_' . $post_id, 'saw_lms_courses' );
+		wp_cache_delete( 'course_data_' . $post_id, 'saw_lms_courses' );
 
 		/**
 		 * Fires after course meta is saved.
@@ -504,25 +499,24 @@ class SAW_LMS_Course {
 	 * @return array Modified columns.
 	 */
 	public function add_admin_columns( $columns ) {
-		$new_columns = array();
+		// Remove date temporarily.
+		$date = $columns['date'];
+		unset( $columns['date'] );
 
-		foreach ( $columns as $key => $value ) {
-			$new_columns[ $key ] = $value;
+		// Add custom columns.
+		$columns['thumbnail']  = __( 'Image', 'saw-lms' );
+		$columns['difficulty'] = __( 'Difficulty', 'saw-lms' );
+		$columns['duration']   = __( 'Duration', 'saw-lms' );
+		$columns['students']   = __( 'Students', 'saw-lms' );
 
-			if ( 'title' === $key ) {
-				$new_columns['saw_difficulty']   = __( 'Difficulty', 'saw-lms' );
-				$new_columns['saw_duration']     = __( 'Duration', 'saw-lms' );
-				$new_columns['saw_enrollments']  = __( 'Enrollments', 'saw-lms' );
-			}
-		}
+		// Re-add date.
+		$columns['date'] = $date;
 
-		return $new_columns;
+		return $columns;
 	}
 
 	/**
-	 * Render admin columns
-	 *
-	 * UPDATED in v3.1.1: Difficulty from meta field.
+	 * Render admin column content
 	 *
 	 * @since 2.1.0
 	 * @param string $column  Column name.
@@ -531,29 +525,42 @@ class SAW_LMS_Course {
 	 */
 	public function render_admin_columns( $column, $post_id ) {
 		switch ( $column ) {
-			case 'saw_difficulty':
+			case 'thumbnail':
+				$thumbnail = get_the_post_thumbnail( $post_id, array( 50, 50 ) );
+				echo $thumbnail ? $thumbnail : '—';
+				break;
+
+			case 'difficulty':
 				$difficulty = get_post_meta( $post_id, '_saw_lms_difficulty', true );
 				if ( ! empty( $difficulty ) ) {
-					$labels = array(
-						'beginner'     => __( 'Beginner', 'saw-lms' ),
-						'intermediate' => __( 'Intermediate', 'saw-lms' ),
-						'advanced'     => __( 'Advanced', 'saw-lms' ),
-						'expert'       => __( 'Expert', 'saw-lms' ),
-					);
-					echo isset( $labels[ $difficulty ] ) ? esc_html( $labels[ $difficulty ] ) : '—';
+					echo '<span class="saw-lms-difficulty saw-lms-difficulty-' . esc_attr( $difficulty ) . '">';
+					echo esc_html( ucfirst( $difficulty ) );
+					echo '</span>';
 				} else {
 					echo '—';
 				}
 				break;
 
-			case 'saw_duration':
-				$duration = get_post_meta( $post_id, '_saw_lms_duration', true );
-				echo $duration ? esc_html( $duration . ' hours' ) : '—';
+			case 'duration':
+				$duration = get_post_meta( $post_id, '_saw_lms_duration_minutes', true );
+				if ( ! empty( $duration ) ) {
+					$hours   = floor( $duration / 60 );
+					$minutes = $duration % 60;
+					if ( $hours > 0 ) {
+						/* translators: 1: hours, 2: minutes */
+						printf( esc_html__( '%1$dh %2$dm', 'saw-lms' ), (int) $hours, (int) $minutes );
+					} else {
+						/* translators: %s: minutes */
+						printf( esc_html__( '%s min', 'saw-lms' ), (int) $minutes );
+					}
+				} else {
+					echo '—';
+				}
 				break;
 
-			case 'saw_enrollments':
-				$enrollments = get_post_meta( $post_id, '_saw_lms_total_enrollments', true );
-				echo $enrollments ? esc_html( $enrollments ) : '0';
+			case 'students':
+				$students = get_post_meta( $post_id, '_saw_lms_total_enrollments', true );
+				echo esc_html( $students ? $students : '0' );
 				break;
 		}
 	}
@@ -563,65 +570,39 @@ class SAW_LMS_Course {
 	 *
 	 * @since 2.1.0
 	 * @param array $columns Sortable columns.
-	 * @return array Modified columns.
+	 * @return array Modified sortable columns.
 	 */
 	public function sortable_columns( $columns ) {
-		$columns['saw_duration']    = 'saw_duration';
-		$columns['saw_enrollments'] = 'saw_enrollments';
-
+		$columns['duration'] = 'duration';
+		$columns['students'] = 'students';
 		return $columns;
 	}
 
 	/**
- * Enqueue admin assets
- *
- * FIXED in v3.1.2: Added tabs.css and tabs.js for tabbed meta boxes.
- *
- * @since 2.1.0
- * @param string $hook Current admin page hook.
- * @return void
- */
-public function enqueue_admin_assets( $hook ) {
-	global $post_type;
+	 * Get course by ID (helper method)
+	 *
+	 * @since 2.1.0
+	 * @param int $course_id Course post ID.
+	 * @return WP_Post|null Course post object or null.
+	 */
+	public static function get_course( $course_id ) {
+		$course = get_post( $course_id );
 
-	if ( self::POST_TYPE !== $post_type ) {
-		return;
+		if ( ! $course || self::POST_TYPE !== $course->post_type ) {
+			return null;
+		}
+
+		return $course;
 	}
 
-	if ( 'post.php' === $hook || 'post-new.php' === $hook ) {
-		// Components CSS (buttons, forms, etc.)
-		wp_enqueue_style(
-			'saw-lms-admin-components',
-			SAW_LMS_PLUGIN_URL . 'assets/css/admin/components.css',
-			array(),
-			SAW_LMS_VERSION
-		);
-
-		// Tabs CSS (NEW!)
-		wp_enqueue_style(
-			'saw-lms-admin-tabs',
-			SAW_LMS_PLUGIN_URL . 'assets/css/admin/tabs.css',
-			array( 'saw-lms-admin-components' ),
-			SAW_LMS_VERSION
-		);
-
-		// Utilities JS
-		wp_enqueue_script(
-			'saw-lms-admin-utilities',
-			SAW_LMS_PLUGIN_URL . 'assets/js/admin/utilities.js',
-			array( 'jquery' ),
-			SAW_LMS_VERSION,
-			true
-		);
-
-		// Tabs JS (NEW!)
-		wp_enqueue_script(
-			'saw-lms-admin-tabs',
-			SAW_LMS_PLUGIN_URL . 'assets/js/admin/tabs.js',
-			array( 'jquery' ),
-			SAW_LMS_VERSION,
-			true
-		);
+	/**
+	 * Check if course exists
+	 *
+	 * @since 2.1.0
+	 * @param int $course_id Course post ID.
+	 * @return bool True if course exists, false otherwise.
+	 */
+	public static function course_exists( $course_id ) {
+		return null !== self::get_course( $course_id );
 	}
-}
 }

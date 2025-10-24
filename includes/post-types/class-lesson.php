@@ -4,11 +4,12 @@
  *
  * Handles registration and functionality for the Lesson CPT.
  * REFACTORED in v3.0.0: Config-based meta boxes using lesson-fields.php
+ * FIXED in v3.1.4: Removed enqueue_admin_assets() - now handled centrally by class-admin-assets.php
  *
  * @package     SAW_LMS
  * @subpackage  Post_Types
  * @since       2.1.0
- * @version     3.0.0
+ * @version     3.1.4
  */
 
 // Exit if accessed directly.
@@ -23,6 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * meta boxes, admin columns, and lesson-specific functionality.
  *
  * UPDATED in v3.0.0: Refactored to use config-based meta boxes.
+ * FIXED in v3.1.4: Removed duplicate asset enqueueing.
  *
  * @since 2.1.0
  */
@@ -82,6 +84,7 @@ class SAW_LMS_Lesson {
 	 * Register hooks for the Lesson CPT.
 	 *
 	 * UPDATED in v3.0.0: Load fields config.
+	 * UPDATED in v3.1.4: Removed enqueue hook.
 	 *
 	 * @since 2.1.0
 	 */
@@ -104,12 +107,13 @@ class SAW_LMS_Lesson {
 		add_action( 'manage_' . self::POST_TYPE . '_posts_custom_column', array( $this, 'render_admin_columns' ), 10, 2 );
 		add_filter( 'manage_edit-' . self::POST_TYPE . '_sortable_columns', array( $this, 'sortable_columns' ) );
 
-		// Admin assets.
-		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
+		// NOTE: Admin assets are now handled centrally by class-admin-assets.php (v3.1.4).
 	}
 
 	/**
 	 * Register Lesson post type
+	 *
+	 * UPDATED in v3.1.4: Changed show_in_menu to false (menu managed by class-admin-menu.php).
 	 *
 	 * @since 2.1.0
 	 * @return void
@@ -144,7 +148,7 @@ class SAW_LMS_Lesson {
 			'hierarchical'        => true,
 			'public'              => false,
 			'show_ui'             => true,
-			'show_in_menu'        => 'saw-lms',
+			'show_in_menu'        => false, // Menu handled by class-admin-menu.php.
 			'menu_position'       => 27,
 			'menu_icon'           => 'dashicons-welcome-learn-more',
 			'show_in_admin_bar'   => true,
@@ -367,42 +371,6 @@ class SAW_LMS_Lesson {
 	public function sortable_columns( $columns ) {
 		$columns['duration'] = 'duration';
 		return $columns;
-	}
-
-	/**
-	 * Enqueue admin assets
-	 *
-	 * @since 2.1.0
-	 * @param string $hook Current admin page hook.
-	 * @return void
-	 */
-	public function enqueue_admin_assets( $hook ) {
-		// Only on lesson edit screen.
-		if ( 'post.php' !== $hook && 'post-new.php' !== $hook ) {
-			return;
-		}
-
-		$screen = get_current_screen();
-		if ( ! $screen || self::POST_TYPE !== $screen->post_type ) {
-			return;
-		}
-
-		// Enqueue admin styles.
-		wp_enqueue_style(
-			'saw-lms-lesson-admin',
-			SAW_LMS_PLUGIN_URL . 'assets/css/admin/lesson.css',
-			array(),
-			SAW_LMS_VERSION
-		);
-
-		// Enqueue admin scripts.
-		wp_enqueue_script(
-			'saw-lms-lesson-admin',
-			SAW_LMS_PLUGIN_URL . 'assets/js/admin/lesson.js',
-			array( 'jquery' ),
-			SAW_LMS_VERSION,
-			true
-		);
 	}
 
 	/**
