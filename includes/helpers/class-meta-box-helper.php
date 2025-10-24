@@ -6,11 +6,12 @@
  * UPDATED in v3.0.0: Added render_tabbed_meta_box() for tab support.
  * UPDATED in v3.1.1: Added support for 'heading' and 'date' field types.
  * FIXED in v3.1.5: COMPLETED render_field() - all field types now render properly!
+ * UPDATED in v3.2.4: Added render_sub_tabbed_content() for vertical sub-tabs support.
  *
  * @package     SAW_LMS
  * @subpackage  Helpers
  * @since       3.0.0
- * @version     3.1.5
+ * @version     3.2.4
  */
 
 // Exit if accessed directly.
@@ -31,6 +32,8 @@ class SAW_LMS_Meta_Box_Helper {
 	 * Render a tabbed meta box
 	 *
 	 * Creates a meta box with multiple tabs. Each tab contains fields from a separate config file.
+	 *
+	 * UPDATED in v3.2.4: Added support for sub-tabs in Settings tab.
 	 *
 	 * @since 3.1.0
 	 * @param int   $post_id Post ID.
@@ -76,11 +79,17 @@ class SAW_LMS_Meta_Box_Helper {
 				esc_attr( $tab_id )
 			);
 
-			// Render fields for this tab.
-			if ( ! empty( $tab_config['fields'] ) ) {
-				foreach ( $tab_config['fields'] as $key => $field ) {
-					$value = self::get_field_value( $post_id, $key, $field );
-					self::render_field( $key, $field, $value );
+			// Check if this tab has sub-tabs (Settings tab special case).
+			if ( 'settings' === $tab_id && self::has_sub_tabs( $tab_config['fields'] ) ) {
+				// Render with sub-tabs.
+				self::render_sub_tabbed_content( $post_id, $tab_config['fields'] );
+			} else {
+				// Render fields normally.
+				if ( ! empty( $tab_config['fields'] ) ) {
+					foreach ( $tab_config['fields'] as $key => $field ) {
+						$value = self::get_field_value( $post_id, $key, $field );
+						self::render_field( $key, $field, $value );
+					}
 				}
 			}
 
@@ -90,6 +99,127 @@ class SAW_LMS_Meta_Box_Helper {
 		echo '</div>'; // .saw-tabs-content
 
 		echo '</div>'; // .saw-tabs-wrapper
+	}
+
+	/**
+	 * Check if fields array contains sub-tabs structure
+	 *
+	 * Sub-tabs structure: array with keys that are arrays containing 'label', 'icon', 'fields'.
+	 *
+	 * @since 3.2.4
+	 * @param array $fields Fields configuration.
+	 * @return bool True if has sub-tabs.
+	 */
+	private static function has_sub_tabs( $fields ) {
+		if ( empty( $fields ) || ! is_array( $fields ) ) {
+			return false;
+		}
+
+		// Check first item - if it has 'label' and 'fields' keys, it's a sub-tab.
+		$first_item = reset( $fields );
+		return is_array( $first_item ) && isset( $first_item['label'] ) && isset( $first_item['fields'] );
+	}
+
+	/**
+	 * Render sub-tabbed content
+	 *
+	 * Renders vertical sub-tabs menu with panels for Settings tab.
+	 *
+	 * @since 3.2.4
+	 * @param int   $post_id  Post ID.
+	 * @param array $sub_tabs Array of sub-tabs configuration.
+	 *                        Format: array(
+	 *                            'sub_tab_id' => array(
+	 *                                'label'       => 'Sub-tab Label',
+	 *                                'icon'        => '⚙️',
+	 *                                'description' => 'Optional description',
+	 *                                'fields'      => array( ... field configs ... ),
+	 *                            ),
+	 *                        )
+	 * @return void
+	 */
+	public static function render_sub_tabbed_content( $post_id, $sub_tabs ) {
+		if ( empty( $sub_tabs ) ) {
+			return;
+		}
+
+		echo '<div class="saw-sub-tabs-container">';
+
+		// LEFT SIDE: Vertical menu.
+		echo '<div class="saw-sub-tabs-menu">';
+		$first = true;
+		foreach ( $sub_tabs as $sub_tab_id => $sub_tab_config ) {
+			$active_class = $first ? ' saw-sub-tab-active' : '';
+			$icon         = isset( $sub_tab_config['icon'] ) ? $sub_tab_config['icon'] : '';
+			$label        = $sub_tab_config['label'];
+
+			printf(
+				'<button type="button" class="saw-sub-tab-button%s" data-panel="%s">',
+				esc_attr( $active_class ),
+				esc_attr( $sub_tab_id )
+			);
+
+			// Icon.
+			if ( $icon ) {
+				printf(
+					'<span class="saw-sub-tab-icon">%s</span>',
+					esc_html( $icon )
+				);
+			}
+
+			// Label.
+			printf(
+				'<span class="saw-sub-tab-label">%s</span>',
+				esc_html( $label )
+			);
+
+			echo '</button>';
+
+			$first = false;
+		}
+		echo '</div>'; // .saw-sub-tabs-menu
+
+		// RIGHT SIDE: Panels with fields.
+		echo '<div class="saw-sub-tabs-panels">';
+		$first = true;
+		foreach ( $sub_tabs as $sub_tab_id => $sub_tab_config ) {
+			$active_class = $first ? ' saw-sub-tab-panel-active' : '';
+
+			printf(
+				'<div class="saw-sub-tab-panel%s" data-panel-id="%s">',
+				esc_attr( $active_class ),
+				esc_attr( $sub_tab_id )
+			);
+
+			// Panel heading (optional).
+			if ( ! empty( $sub_tab_config['description'] ) ) {
+				echo '<div class="saw-sub-panel-heading">';
+				printf(
+					'<h3>%s %s</h3>',
+					! empty( $sub_tab_config['icon'] ) ? esc_html( $sub_tab_config['icon'] ) : '',
+					esc_html( $sub_tab_config['label'] )
+				);
+				printf(
+					'<p class="description">%s</p>',
+					esc_html( $sub_tab_config['description'] )
+				);
+				echo '</div>';
+			}
+
+			// Render fields for this sub-tab.
+			if ( ! empty( $sub_tab_config['fields'] ) ) {
+				foreach ( $sub_tab_config['fields'] as $key => $field ) {
+					$value = self::get_field_value( $post_id, $key, $field );
+					self::render_field( $key, $field, $value );
+				}
+			}
+
+			echo '</div>'; // .saw-sub-tab-panel
+			$first = false;
+		}
+		echo '</div>'; // .saw-sub-tabs-panels
+
+		echo '</div>'; // .saw-sub-tabs-container
 	}
 
 	/**
@@ -242,13 +372,14 @@ class SAW_LMS_Meta_Box_Helper {
 				break;
 
 			case 'checkbox':
+				$checkbox_label = ! empty( $field['checkbox_label'] ) ? $field['checkbox_label'] : $label;
 				printf(
 					'<label class="form-checkbox"><input type="checkbox" id="%s" name="%s" value="1"%s%s> <span>%s</span></label>',
 					esc_attr( $key ),
 					esc_attr( $key ),
 					checked( $value, '1', false ),
 					$readonly ? ' disabled' : '',
-					esc_html( ! empty( $field['checkbox_label'] ) ? $field['checkbox_label'] : $label )
+					esc_html( $checkbox_label )
 				);
 				$description = ''; // Don't show description twice.
 				break;

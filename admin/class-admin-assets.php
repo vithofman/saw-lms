@@ -6,11 +6,12 @@
  * Všechny assety jsou načteny pouze v admin oblasti.
  *
  * UPDATED in v3.1.4: Added tabs.css and tabs.js for Course CPT meta boxes.
+ * UPDATED in v3.2.4: Added sub-tabs.css and sub-tabs.js for Settings sub-tabs.
  *
  * @package    SAW_LMS
  * @subpackage SAW_LMS/admin
  * @since      1.0.0
- * @version    3.1.4
+ * @version    3.2.4
  */
 
 // If this file is called directly, abort.
@@ -63,8 +64,9 @@ class SAW_LMS_Admin_Assets {
 	 * 2. Utilities (utility třídy)
 	 * 3. Components (UI komponenty)
 	 * 4. Tabs (tabbed meta boxes)
-	 * 5. Layouts (page layouts)
-	 * 6. Admin Menu (Phase 2.5)
+	 * 5. Sub-tabs (vertical sub-tabs for Settings) - NEW in v3.2.4
+	 * 6. Layouts (page layouts)
+	 * 7. Admin Menu (Phase 2.5)
 	 *
 	 * @since 1.0.0
 	 */
@@ -106,7 +108,7 @@ class SAW_LMS_Admin_Assets {
 			'all'
 		);
 
-		// 4. Tabs (NEW in v3.1.4) - for tabbed meta boxes in Course CPT.
+		// 4. Tabs (v3.1.4) - for tabbed meta boxes in Course CPT.
 		wp_enqueue_style(
 			$this->plugin_name . '-admin-tabs',
 			$assets_url . 'tabs.css',
@@ -118,7 +120,32 @@ class SAW_LMS_Admin_Assets {
 			'all'
 		);
 
-		// 5. Layouts.
+		// 5. Sub-tabs (NEW in v3.2.4) - for vertical sub-tabs in Settings tab.
+		wp_enqueue_style(
+			$this->plugin_name . '-admin-sub-tabs',
+			$assets_url . 'sub-tabs.css',
+			array(
+				$this->plugin_name . '-admin-variables',
+				$this->plugin_name . '-admin-components',
+				$this->plugin_name . '-admin-tabs',
+			),
+			$this->version,
+			'all'
+		);
+
+		// 5b. Course Edit Layout Fix (NEW in v3.2.4) - fixes split-screen issue.
+		wp_enqueue_style(
+			$this->plugin_name . '-course-edit-layout-fix',
+			$assets_url . 'course-edit-layout-fix.css',
+			array(
+				$this->plugin_name . '-admin-tabs',
+				$this->plugin_name . '-admin-sub-tabs',
+			),
+			$this->version,
+			'all'
+		);
+
+		// 6. Layouts.
 		wp_enqueue_style(
 			$this->plugin_name . '-admin-layouts',
 			$assets_url . 'layouts.css',
@@ -131,7 +158,7 @@ class SAW_LMS_Admin_Assets {
 			'all'
 		);
 
-		// 6. Admin Menu Styling (Phase 2.5).
+		// 7. Admin Menu Styling (Phase 2.5).
 		wp_enqueue_style(
 			$this->plugin_name . '-admin-menu',
 			$assets_url . 'admin-menu.css',
@@ -163,11 +190,20 @@ class SAW_LMS_Admin_Assets {
 			true // Load in footer.
 		);
 
-		// Tabs JS (NEW in v3.1.4) - requires jQuery.
+		// Tabs JS (v3.1.4) - requires jQuery.
 		wp_enqueue_script(
 			$this->plugin_name . '-admin-tabs',
 			$assets_url . 'tabs.js',
 			array( 'jquery' ),
+			$this->version,
+			true // Load in footer.
+		);
+
+		// Sub-tabs JS (NEW in v3.2.4) - requires jQuery.
+		wp_enqueue_script(
+			$this->plugin_name . '-admin-sub-tabs',
+			$assets_url . 'sub-tabs.js',
+			array( 'jquery', $this->plugin_name . '-admin-tabs' ),
 			$this->version,
 			true // Load in footer.
 		);
