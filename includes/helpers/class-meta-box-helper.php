@@ -5,11 +5,12 @@
  * Provides reusable methods for rendering and handling meta box fields.
  * UPDATED in v3.0.0: Added render_tabbed_meta_box() for tab support.
  * UPDATED in v3.1.1: Added support for 'heading' and 'date' field types.
+ * FIXED in v3.1.5: COMPLETED render_field() - all field types now render properly!
  *
  * @package     SAW_LMS
  * @subpackage  Helpers
  * @since       3.0.0
- * @version     3.1.1
+ * @version     3.1.5
  */
 
 // Exit if accessed directly.
@@ -83,7 +84,7 @@ class SAW_LMS_Meta_Box_Helper {
 				}
 			}
 
-			echo '</div>';
+			echo '</div>'; // .saw-tab-content
 			$first = false;
 		}
 		echo '</div>'; // .saw-tabs-content
@@ -119,6 +120,7 @@ class SAW_LMS_Meta_Box_Helper {
 	 * Outputs HTML for a meta box field based on its type.
 	 *
 	 * UPDATED in v3.1.1: Added 'heading' and 'date' field types.
+	 * FIXED in v3.1.5: COMPLETED all field types - no more missing cases!
 	 *
 	 * @since 3.0.0
 	 * @param string $key   Meta key.
@@ -149,7 +151,7 @@ class SAW_LMS_Meta_Box_Helper {
 		// Standard field wrapper.
 		echo '<div class="saw-field-group">';
 
-		// Label.
+		// Label (except for checkbox).
 		if ( $label && 'checkbox' !== $type ) {
 			printf(
 				'<label for="%s" class="saw-field-label">%s%s</label>',
@@ -268,7 +270,26 @@ class SAW_LMS_Meta_Box_Helper {
 
 			case 'post_select':
 				$post_type = isset( $field['post_type'] ) ? $field['post_type'] : 'post';
-				$posts     = get_posts(
+				$multiple  = ! empty( $field['multiple'] );
+				$selected  = $multiple && is_array( $value ) ? $value : array( $value );
+
+				printf(
+					'<select id="%s" name="%s%s" class="form-select"%s%s%s>',
+					esc_attr( $key ),
+					esc_attr( $key ),
+					$multiple ? '[]' : '',
+					$multiple ? ' multiple' : '',
+					$readonly ? ' disabled' : '',
+					$required ? ' required' : ''
+				);
+
+				// Empty option for single select.
+				if ( ! $multiple ) {
+					echo '<option value="">-- ' . esc_html__( 'Select', 'saw-lms' ) . ' --</option>';
+				}
+
+				// Get posts of specified type.
+				$posts = get_posts(
 					array(
 						'post_type'      => $post_type,
 						'posts_per_page' => -1,
@@ -278,21 +299,11 @@ class SAW_LMS_Meta_Box_Helper {
 					)
 				);
 
-				printf(
-					'<select id="%s" name="%s" class="form-select"%s%s>',
-					esc_attr( $key ),
-					esc_attr( $key ),
-					$readonly ? ' disabled' : '',
-					$required ? ' required' : ''
-				);
-
-				echo '<option value="">— Select —</option>';
-
 				foreach ( $posts as $post ) {
 					printf(
-						'<option value="%s"%s>%s</option>',
+						'<option value="%d"%s>%s</option>',
 						esc_attr( $post->ID ),
-						selected( $value, $post->ID, false ),
+						in_array( $post->ID, $selected, true ) ? ' selected' : '',
 						esc_html( $post->post_title )
 					);
 				}
@@ -301,26 +312,32 @@ class SAW_LMS_Meta_Box_Helper {
 				break;
 
 			case 'readonly':
+				// Readonly text field (displays value but can't be edited).
 				printf(
-					'<div class="saw-readonly-value">%s</div>',
-					esc_html( $value ? $value : '—' )
+					'<input type="text" id="%s" name="%s" value="%s" class="form-input" readonly>',
+					esc_attr( $key ),
+					esc_attr( $key ),
+					esc_attr( $value )
 				);
 				break;
 
 			default:
-				// Unknown field type - show warning in debug mode.
-				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					printf(
-						'<div class="notice notice-warning inline"><p>Unknown field type: <strong>%s</strong></p></div>',
-						esc_html( $type )
-					);
-				}
+				// Fallback for unknown types - render as text.
+				printf(
+					'<input type="text" id="%s" name="%s" value="%s" placeholder="%s" class="form-input"%s%s>',
+					esc_attr( $key ),
+					esc_attr( $key ),
+					esc_attr( $value ),
+					esc_attr( $placeholder ),
+					$readonly ? ' readonly' : '',
+					$required ? ' required' : ''
+				);
 				break;
 		}
 
 		echo '</div>'; // .saw-field-input
 
-		// Description (only if not already shown in checkbox).
+		// Description (if not already shown for checkbox).
 		if ( $description ) {
 			printf(
 				'<p class="saw-field-description">%s</p>',
@@ -336,45 +353,47 @@ class SAW_LMS_Meta_Box_Helper {
 	 *
 	 * Sanitizes input based on field type.
 	 *
-	 * UPDATED in v3.1.1: Added 'date' sanitization.
-	 *
 	 * @since 3.0.0
-	 * @param mixed  $value      Value to sanitize.
-	 * @param string $field_type Field type.
+	 * @param mixed  $value Input value.
+	 * @param string $type  Field type.
 	 * @return mixed Sanitized value.
 	 */
-	public static function sanitize_value( $value, $field_type ) {
-		switch ( $field_type ) {
-			case 'text':
-			case 'select':
-			case 'radio':
-				return sanitize_text_field( $value );
-
-			case 'textarea':
-				return sanitize_textarea_field( $value );
+	public static function sanitize_value( $value, $type ) {
+		switch ( $type ) {
+			case 'email':
+				return sanitize_email( $value );
 
 			case 'url':
 				return esc_url_raw( $value );
 
-			case 'email':
-				return sanitize_email( $value );
-
 			case 'number':
-				return is_numeric( $value ) ? $value : 0;
+				return is_numeric( $value ) ? floatval( $value ) : 0;
+
+			case 'checkbox':
+				return $value === '1' ? '1' : '';
+
+			case 'textarea':
+				return wp_kses_post( $value );
+
+			case 'post_select':
+				// Handle multiple select (array of IDs).
+				if ( is_array( $value ) ) {
+					return array_map( 'absint', $value );
+				}
+				// Single select (single ID).
+				return absint( $value );
 
 			case 'date':
-				// Validate date format (YYYY-MM-DD).
+				// Validate date format YYYY-MM-DD.
 				if ( preg_match( '/^\d{4}-\d{2}-\d{2}$/', $value ) ) {
 					return sanitize_text_field( $value );
 				}
 				return '';
 
-			case 'checkbox':
-				return ( '1' === $value || 1 === $value ) ? '1' : '';
-
-			case 'post_select':
-				return absint( $value );
-
+			case 'text':
+			case 'select':
+			case 'radio':
+			case 'readonly':
 			default:
 				return sanitize_text_field( $value );
 		}
