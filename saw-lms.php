@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Definice konstant.
-define( 'SAW_LMS_VERSION', '0.1.0' );
+define( 'SAW_LMS_VERSION', '3.2.0' );
 define( 'SAW_LMS_PLUGIN_FILE', __FILE__ );
 define( 'SAW_LMS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SAW_LMS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
