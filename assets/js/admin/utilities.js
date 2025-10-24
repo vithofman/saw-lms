@@ -557,25 +557,49 @@
 	};
 
 	/**
-	 * ============================================
-	 * INITIALIZATION
-	 * ============================================
-	 */
-	document.addEventListener('DOMContentLoaded', function() {
-		// Initialize tabs if present
-		const tabsElements = document.querySelectorAll('.saw-tabs');
-		tabsElements.forEach(tabs => {
-			SAW_LMS_Admin.tabs.init(tabs);
-		});
-		
-		// Initialize panels if present
-		SAW_LMS_Admin.panels.init();
-		
-		// Log that utilities are ready
-		if (window.console && window.console.log) {
-			console.log('SAW LMS Admin Utilities loaded');
-		}
+ * ============================================
+ * INITIALIZATION
+ * ============================================
+ */
+document.addEventListener('DOMContentLoaded', function() {
+	// Initialize tabs if present
+	const tabsElements = document.querySelectorAll('.saw-tabs');
+	tabsElements.forEach(tabs => {
+		SAW_LMS_Admin.tabs.init(tabs);
 	});
+	
+	// Initialize panels if present
+	SAW_LMS_Admin.panels.init();
+	
+	// Log that utilities are ready
+	if (window.console && window.console.log) {
+		console.log('SAW LMS Admin Utilities loaded');
+	}
+});
+
+/**
+ * ============================================
+ * META BOX TABS (jQuery)
+ * ============================================
+ */
+jQuery(document).ready(function($) {
+	$('.saw-tabs-wrapper').each(function() {
+		var $wrapper = $(this);
+		
+		$wrapper.find('.saw-tab-button').on('click', function(e) {
+			e.preventDefault();
+			
+			var $button = $(this);
+			var tabId = $button.data('tab');
+			
+			$wrapper.find('.saw-tab-button').removeClass('saw-tab-active');
+			$button.addClass('saw-tab-active');
+			
+			$wrapper.find('.saw-tab-content').removeClass('saw-tab-content-active');
+			$wrapper.find('.saw-tab-content[data-tab-content="' + tabId + '"]').addClass('saw-tab-content-active');
+		});
+	});
+});
 
 })();
 
@@ -637,6 +661,30 @@ jQuery(document).ready(function($) {
             $button.addClass('saw-tab-active');
             
             // Update content visibility
+            $wrapper.find('.saw-tab-content').removeClass('saw-tab-content-active');
+            $wrapper.find('.saw-tab-content[data-tab-content="' + tabId + '"]').addClass('saw-tab-content-active');
+        });
+    });
+});
+
+/**
+ * SAW Tabs Component for Meta Boxes
+ *
+ * @since 3.1.0
+ */
+jQuery(document).ready(function($) {
+    $('.saw-tabs-wrapper').each(function() {
+        var $wrapper = $(this);
+        
+        $wrapper.find('.saw-tab-button').on('click', function(e) {
+            e.preventDefault();
+            
+            var $button = $(this);
+            var tabId = $button.data('tab');
+            
+            $wrapper.find('.saw-tab-button').removeClass('saw-tab-active');
+            $button.addClass('saw-tab-active');
+            
             $wrapper.find('.saw-tab-content').removeClass('saw-tab-content-active');
             $wrapper.find('.saw-tab-content[data-tab-content="' + tabId + '"]').addClass('saw-tab-content-active');
         });

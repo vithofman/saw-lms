@@ -4,11 +4,12 @@
  *
  * Handles registration and functionality for the Course CPT.
  * REFACTORED in v3.1.0: Tabbed meta boxes using config files.
+ * REFACTORED in v3.1.1: Difficulty as meta field instead of taxonomy.
  *
  * @package     SAW_LMS
  * @subpackage  Post_Types
  * @since       2.1.0
- * @version     3.1.0
+ * @version     3.1.1
  */
 
 // Exit if accessed directly.
@@ -22,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Manages the Course custom post type including registration,
  * meta boxes, admin columns, and course-specific functionality.
  *
- * UPDATED in v3.1.0: Refactored to use tabbed meta boxes.
+ * UPDATED in v3.1.1: Difficulty is now a meta field, not taxonomy.
  *
  * @since 2.1.0
  */
@@ -82,7 +83,6 @@ class SAW_LMS_Course {
 
 		// Register taxonomies.
 		add_action( 'init', array( $this, 'register_taxonomies' ) );
-		add_action( 'init', array( $this, 'register_default_difficulty_terms' ), 20 );
 
 		// Meta boxes.
 		add_action( 'add_meta_boxes', array( $this, 'add_meta_boxes' ) );
@@ -187,6 +187,8 @@ class SAW_LMS_Course {
 	/**
 	 * Register Course taxonomies
 	 *
+	 * UPDATED in v3.1.1: Removed difficulty taxonomy (now meta field).
+	 *
 	 * @since 2.1.0
 	 * @return void
 	 */
@@ -219,63 +221,6 @@ class SAW_LMS_Course {
 				'show_in_rest'      => true,
 			)
 		);
-
-		// Course Difficulty (keeping taxonomy but hiding default meta box).
-		$difficulty_labels = array(
-			'name'              => _x( 'Course Difficulties', 'taxonomy general name', 'saw-lms' ),
-			'singular_name'     => _x( 'Difficulty', 'taxonomy singular name', 'saw-lms' ),
-			'search_items'      => __( 'Search Difficulties', 'saw-lms' ),
-			'all_items'         => __( 'All Difficulties', 'saw-lms' ),
-			'edit_item'         => __( 'Edit Difficulty', 'saw-lms' ),
-			'update_item'       => __( 'Update Difficulty', 'saw-lms' ),
-			'add_new_item'      => __( 'Add New Difficulty', 'saw-lms' ),
-			'new_item_name'     => __( 'New Difficulty Name', 'saw-lms' ),
-			'menu_name'         => __( 'Difficulty', 'saw-lms' ),
-		);
-
-		register_taxonomy(
-			'saw_course_difficulty',
-			self::POST_TYPE,
-			array(
-				'hierarchical'      => false,
-				'labels'            => $difficulty_labels,
-				'show_ui'           => true,
-				'show_admin_column' => true,
-				'query_var'         => true,
-				'rewrite'           => array( 'slug' => 'difficulty' ),
-				'show_in_rest'      => true,
-				'meta_box_cb'       => false, // Hide default meta box - we handle it in tabs.
-			)
-		);
-	}
-
-	/**
-	 * Register default difficulty terms
-	 *
-	 * Creates default difficulty levels if they don't exist.
-	 *
-	 * @since 2.1.1
-	 * @return void
-	 */
-	public function register_default_difficulty_terms() {
-		$default_terms = array(
-			'beginner'     => __( 'Beginner', 'saw-lms' ),
-			'intermediate' => __( 'Intermediate', 'saw-lms' ),
-			'advanced'     => __( 'Advanced', 'saw-lms' ),
-			'expert'       => __( 'Expert', 'saw-lms' ),
-		);
-
-		foreach ( $default_terms as $slug => $name ) {
-			if ( ! term_exists( $slug, 'saw_course_difficulty' ) ) {
-				wp_insert_term(
-					$name,
-					'saw_course_difficulty',
-					array(
-						'slug' => $slug,
-					)
-				);
-			}
-		}
 	}
 
 	/**
@@ -368,6 +313,7 @@ class SAW_LMS_Course {
 	 * Save meta box data
 	 *
 	 * REFACTORED in v3.1.0: Universal save method with sanitization.
+	 * UPDATED in v3.1.1: Difficulty saved as meta field.
 	 *
 	 * @since 2.1.0
 	 * @param int     $post_id Post ID.
@@ -402,24 +348,6 @@ class SAW_LMS_Course {
 			foreach ( $tab_config['fields'] as $key => $field ) {
 				// Skip readonly fields.
 				if ( ! empty( $field['readonly'] ) ) {
-					continue;
-				}
-
-				// Handle difficulty field specially (taxonomy).
-				if ( '_saw_lms_difficulty' === $key ) {
-					if ( isset( $_POST[ $key ] ) ) {
-						$difficulty_slug = sanitize_text_field( wp_unslash( $_POST[ $key ] ) );
-						if ( ! empty( $difficulty_slug ) ) {
-							// Get term by slug.
-							$term = get_term_by( 'slug', $difficulty_slug, 'saw_course_difficulty' );
-							if ( $term ) {
-								wp_set_object_terms( $post_id, $term->term_id, 'saw_course_difficulty', false );
-							}
-						} else {
-							// Clear difficulty.
-							wp_set_object_terms( $post_id, array(), 'saw_course_difficulty', false );
-						}
-					}
 					continue;
 				}
 
@@ -480,6 +408,8 @@ class SAW_LMS_Course {
 	/**
 	 * Render admin columns
 	 *
+	 * UPDATED in v3.1.1: Difficulty from meta field.
+	 *
 	 * @since 2.1.0
 	 * @param string $column  Column name.
 	 * @param int    $post_id Post ID.
@@ -488,9 +418,15 @@ class SAW_LMS_Course {
 	public function render_admin_columns( $column, $post_id ) {
 		switch ( $column ) {
 			case 'saw_difficulty':
-				$terms = get_the_terms( $post_id, 'saw_course_difficulty' );
-				if ( ! empty( $terms ) && ! is_wp_error( $terms ) ) {
-					echo esc_html( $terms[0]->name );
+				$difficulty = get_post_meta( $post_id, '_saw_lms_difficulty', true );
+				if ( ! empty( $difficulty ) ) {
+					$labels = array(
+						'beginner'     => __( 'Beginner', 'saw-lms' ),
+						'intermediate' => __( 'Intermediate', 'saw-lms' ),
+						'advanced'     => __( 'Advanced', 'saw-lms' ),
+						'expert'       => __( 'Expert', 'saw-lms' ),
+					);
+					echo isset( $labels[ $difficulty ] ) ? esc_html( $labels[ $difficulty ] ) : '—';
 				} else {
 					echo '—';
 				}
