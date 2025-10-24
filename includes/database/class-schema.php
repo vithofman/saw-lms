@@ -5,10 +5,12 @@
  * Orchestrates database table creation and management.
  * Loads all schema classes and provides unified interface for table operations.
  *
+ * FIXED in v3.1.1: Removed logging during activation to prevent output errors.
+ *
  * @package    SAW_LMS
  * @subpackage SAW_LMS/includes/database
  * @since      3.0.0
- * @version    3.1.0
+ * @version    3.1.1
  */
 
 // Exit if accessed directly.
@@ -22,7 +24,7 @@ if ( ! defined( 'WPINC' ) ) {
  * Manages database schema creation, updates, and deletion.
  *
  * @since 3.0.0
- * @version 3.1.0 - Added course_products table
+ * @version 3.1.1 - Removed logging during activation
  */
 class SAW_LMS_Schema {
 
@@ -31,7 +33,7 @@ class SAW_LMS_Schema {
 	 *
 	 * @var string
 	 */
-	const DB_VERSION = '3.1.0'; // UPDATED from 3.0.0
+	const DB_VERSION = '3.1.0';
 
 	/**
 	 * List of all schema classes
@@ -43,7 +45,7 @@ class SAW_LMS_Schema {
 	 */
 	private static $schema_classes = array(
 		'SAW_LMS_Courses_Schema',
-		'SAW_LMS_Course_Products_Schema',      // NEW in v3.1.0 - WooCommerce integration
+		'SAW_LMS_Course_Products_Schema',
 		'SAW_LMS_Enrollments_Schema',
 		'SAW_LMS_Progress_Schema',
 		'SAW_LMS_Quiz_Attempts_Schema',
@@ -71,10 +73,10 @@ class SAW_LMS_Schema {
 	 *
 	 * Loads all schema classes and executes their SQL definitions.
 	 *
-	 * UPDATED in v3.1.0: Now creates 22 tables (added course_products).
+	 * FIXED in v3.1.1: Removed logging to prevent "headers already sent" error.
 	 *
 	 * @since 3.0.0
-	 * @version 3.1.0
+	 * @version 3.1.1
 	 * @return void
 	 */
 	public static function create_tables() {
@@ -95,14 +97,7 @@ class SAW_LMS_Schema {
 		// Execute SQL for each schema.
 		foreach ( self::$schema_classes as $schema_class ) {
 			if ( ! class_exists( $schema_class ) ) {
-				// Log error if logger is available.
-				if ( class_exists( 'SAW_LMS_Logger' ) ) {
-					$logger = SAW_LMS_Logger::init();
-					$logger->error(
-						'Schema class not found during table creation',
-						array( 'class' => $schema_class )
-					);
-				}
+				// Silent fail - no logging during activation.
 				continue;
 			}
 
@@ -119,18 +114,6 @@ class SAW_LMS_Schema {
 
 		// Save DB version.
 		update_option( 'saw_lms_db_version', self::DB_VERSION );
-
-		// Log success if logger is available.
-		if ( class_exists( 'SAW_LMS_Logger' ) ) {
-			$logger = SAW_LMS_Logger::init();
-			$logger->info(
-				'Database tables created successfully',
-				array(
-					'db_version'  => self::DB_VERSION,
-					'table_count' => count( self::$schema_classes ),
-				)
-			);
-		}
 	}
 
 	/**
@@ -152,7 +135,7 @@ class SAW_LMS_Schema {
 		// List of all table names (without prefix).
 		$table_names = array(
 			'saw_lms_courses',
-			'saw_lms_course_products',         // NEW in v3.1.0
+			'saw_lms_course_products',
 			'saw_lms_enrollments',
 			'saw_lms_progress',
 			'saw_lms_quiz_attempts',
@@ -183,15 +166,6 @@ class SAW_LMS_Schema {
 
 		// Delete DB version option.
 		delete_option( 'saw_lms_db_version' );
-
-		// Log if logger is available.
-		if ( class_exists( 'SAW_LMS_Logger' ) ) {
-			$logger = SAW_LMS_Logger::init();
-			$logger->warning(
-				'Database tables dropped',
-				array( 'table_count' => count( $table_names ) )
-			);
-		}
 	}
 
 	/**
@@ -199,8 +173,10 @@ class SAW_LMS_Schema {
 	 *
 	 * Requires all schema files from the schemas/ directory.
 	 *
+	 * FIXED in v3.1.1: Removed logging to prevent output during activation.
+	 *
 	 * @since 3.0.0
-	 * @version 3.1.0 - Added course_products schema
+	 * @version 3.1.1
 	 * @return void
 	 */
 	private static function load_schema_classes() {
@@ -209,7 +185,7 @@ class SAW_LMS_Schema {
 		// List of schema files (in order of table names).
 		$schema_files = array(
 			'class-courses-schema.php',
-			'class-course-products-schema.php', // NEW in v3.1.0
+			'class-course-products-schema.php',
 			'class-enrollments-schema.php',
 			'class-progress-schema.php',
 			'class-quiz-attempts-schema.php',
@@ -237,16 +213,8 @@ class SAW_LMS_Schema {
 			$filepath = $schema_dir . $file;
 			if ( file_exists( $filepath ) ) {
 				require_once $filepath;
-			} else {
-				// Log error if logger is available.
-				if ( class_exists( 'SAW_LMS_Logger' ) ) {
-					$logger = SAW_LMS_Logger::init();
-					$logger->error(
-						'Schema file not found',
-						array( 'file' => $file )
-					);
-				}
 			}
+			// Silent fail - no logging during activation.
 		}
 	}
 

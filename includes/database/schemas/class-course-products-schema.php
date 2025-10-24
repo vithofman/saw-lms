@@ -68,7 +68,7 @@ class SAW_LMS_Course_Products_Schema {
 			access_duration_days int(11) UNSIGNED DEFAULT NULL COMMENT 'Overrides course.access_period_days; NULL = lifetime',
 			priority int(11) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Order in bundles (lower = first)',
 			created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			
+
 			PRIMARY KEY (id),
 			KEY course_id (course_id),
 			KEY product_id (product_id),

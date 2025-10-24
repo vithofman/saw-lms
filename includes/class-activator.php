@@ -5,11 +5,12 @@
  * Handles plugin activation - delegates table creation to Schema Manager.
  *
  * REFACTORED in v3.0.0: All SQL definitions moved to separate schema files.
+ * FIXED in v3.1.1: Removed logging during activation to prevent output errors.
  *
  * @package    SAW_LMS
  * @subpackage SAW_LMS/includes
  * @since      1.0.0
- * @version    3.0.0
+ * @version    3.1.1
  */
 
 // If this file is called directly, abort.
@@ -32,10 +33,14 @@ class SAW_LMS_Activator {
 	 * REFACTORED in v3.0.0:
 	 * - SQL definitions moved to includes/database/schemas/
 	 * - Table creation delegated to SAW_LMS_Schema class
-	 * - 21 tables total (including NEW wp_saw_lms_courses)
+	 * - 22 tables total (including course_products)
+	 *
+	 * FIXED in v3.1.1:
+	 * - Removed ALL logging during activation (prevents "headers already sent" errors)
+	 * - Logging will be done on first admin page load instead
 	 *
 	 * @since 1.0.0
-	 * @version 3.0.0
+	 * @version 3.1.1
 	 */
 	public static function activate() {
 		// Require Schema Manager.
@@ -70,18 +75,8 @@ class SAW_LMS_Activator {
 		// Flush rewrite rules - CRITICAL!
 		flush_rewrite_rules();
 
-		// Log activation if logger is available.
-		if ( class_exists( 'SAW_LMS_Logger' ) ) {
-			$logger = SAW_LMS_Logger::init();
-			$logger->info(
-				'Plugin activated successfully',
-				array(
-					'db_version'  => SAW_LMS_Schema::DB_VERSION,
-					'wp_version'  => get_bloginfo( 'version' ),
-					'table_count' => SAW_LMS_Schema::get_table_count(),
-				)
-			);
-		}
+		// Set activation flag for deferred logging.
+		set_transient( 'saw_lms_activation_pending', true, 300 );
 	}
 
 	/**
