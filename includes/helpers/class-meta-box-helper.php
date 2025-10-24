@@ -4,11 +4,12 @@
  *
  * Provides reusable methods for rendering and handling meta box fields.
  * UPDATED in v3.0.0: Added render_tabbed_meta_box() for tab support.
+ * UPDATED in v3.1.1: Added support for 'heading' and 'date' field types.
  *
  * @package     SAW_LMS
  * @subpackage  Helpers
  * @since       3.0.0
- * @version     3.1.0
+ * @version     3.1.1
  */
 
 // Exit if accessed directly.
@@ -117,6 +118,8 @@ class SAW_LMS_Meta_Box_Helper {
 	 *
 	 * Outputs HTML for a meta box field based on its type.
 	 *
+	 * UPDATED in v3.1.1: Added 'heading' and 'date' field types.
+	 *
 	 * @since 3.0.0
 	 * @param string $key   Meta key.
 	 * @param array  $field Field configuration.
@@ -130,11 +133,24 @@ class SAW_LMS_Meta_Box_Helper {
 		$placeholder = isset( $field['placeholder'] ) ? $field['placeholder'] : '';
 		$readonly    = ! empty( $field['readonly'] );
 		$required    = ! empty( $field['required'] );
+		$rows        = isset( $field['rows'] ) ? absint( $field['rows'] ) : 4;
 
+		// SPECIAL CASE: Heading (section delimiter).
+		if ( 'heading' === $type ) {
+			echo '<div class="saw-field-heading">';
+			echo '<h3>' . esc_html( $label ) . '</h3>';
+			if ( $description ) {
+				echo '<p class="description">' . esc_html( $description ) . '</p>';
+			}
+			echo '</div>';
+			return; // Early return - no standard field wrapper.
+		}
+
+		// Standard field wrapper.
 		echo '<div class="saw-field-group">';
 
 		// Label.
-		if ( $label ) {
+		if ( $label && 'checkbox' !== $type ) {
 			printf(
 				'<label for="%s" class="saw-field-label">%s%s</label>',
 				esc_attr( $key ),
@@ -151,13 +167,37 @@ class SAW_LMS_Meta_Box_Helper {
 			case 'number':
 			case 'url':
 			case 'email':
+				$extra_attrs = '';
+				if ( 'number' === $type && isset( $field['min'] ) ) {
+					$extra_attrs .= ' min="' . esc_attr( $field['min'] ) . '"';
+				}
+				if ( 'number' === $type && isset( $field['max'] ) ) {
+					$extra_attrs .= ' max="' . esc_attr( $field['max'] ) . '"';
+				}
+				if ( 'number' === $type && isset( $field['step'] ) ) {
+					$extra_attrs .= ' step="' . esc_attr( $field['step'] ) . '"';
+				}
+
 				printf(
-					'<input type="%s" id="%s" name="%s" value="%s" placeholder="%s" class="form-input"%s%s>',
+					'<input type="%s" id="%s" name="%s" value="%s" placeholder="%s" class="form-input"%s%s%s>',
 					esc_attr( $type ),
 					esc_attr( $key ),
 					esc_attr( $key ),
 					esc_attr( $value ),
 					esc_attr( $placeholder ),
+					$readonly ? ' readonly' : '',
+					$required ? ' required' : '',
+					$extra_attrs
+				);
+				break;
+
+			case 'date':
+				// Date input field.
+				printf(
+					'<input type="date" id="%s" name="%s" value="%s" class="form-input"%s%s>',
+					esc_attr( $key ),
+					esc_attr( $key ),
+					esc_attr( $value ),
 					$readonly ? ' readonly' : '',
 					$required ? ' required' : ''
 				);
@@ -165,9 +205,10 @@ class SAW_LMS_Meta_Box_Helper {
 
 			case 'textarea':
 				printf(
-					'<textarea id="%s" name="%s" rows="4" class="form-textarea" placeholder="%s"%s%s>%s</textarea>',
+					'<textarea id="%s" name="%s" rows="%d" class="form-textarea" placeholder="%s"%s%s>%s</textarea>',
 					esc_attr( $key ),
 					esc_attr( $key ),
+					$rows,
 					esc_attr( $placeholder ),
 					$readonly ? ' readonly' : '',
 					$required ? ' required' : '',
@@ -205,7 +246,7 @@ class SAW_LMS_Meta_Box_Helper {
 					esc_attr( $key ),
 					checked( $value, '1', false ),
 					$readonly ? ' disabled' : '',
-					esc_html( $description )
+					esc_html( ! empty( $field['checkbox_label'] ) ? $field['checkbox_label'] : $label )
 				);
 				$description = ''; // Don't show description twice.
 				break;
@@ -262,14 +303,24 @@ class SAW_LMS_Meta_Box_Helper {
 			case 'readonly':
 				printf(
 					'<div class="saw-readonly-value">%s</div>',
-					esc_html( $value )
+					esc_html( $value ? $value : '—' )
 				);
+				break;
+
+			default:
+				// Unknown field type - show warning in debug mode.
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					printf(
+						'<div class="notice notice-warning inline"><p>Unknown field type: <strong>%s</strong></p></div>',
+						esc_html( $type )
+					);
+				}
 				break;
 		}
 
 		echo '</div>'; // .saw-field-input
 
-		// Description.
+		// Description (only if not already shown in checkbox).
 		if ( $description ) {
 			printf(
 				'<p class="saw-field-description">%s</p>',
@@ -284,6 +335,8 @@ class SAW_LMS_Meta_Box_Helper {
 	 * Sanitize field value
 	 *
 	 * Sanitizes input based on field type.
+	 *
+	 * UPDATED in v3.1.1: Added 'date' sanitization.
 	 *
 	 * @since 3.0.0
 	 * @param mixed  $value      Value to sanitize.
@@ -307,7 +360,14 @@ class SAW_LMS_Meta_Box_Helper {
 				return sanitize_email( $value );
 
 			case 'number':
-				return absint( $value );
+				return is_numeric( $value ) ? $value : 0;
+
+			case 'date':
+				// Validate date format (YYYY-MM-DD).
+				if ( preg_match( '/^\d{4}-\d{2}-\d{2}$/', $value ) ) {
+					return sanitize_text_field( $value );
+				}
+				return '';
 
 			case 'checkbox':
 				return ( '1' === $value || 1 === $value ) ? '1' : '';
