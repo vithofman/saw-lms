@@ -7,11 +7,12 @@
  *
  * UPDATED in v3.1.4: Added tabs.css and tabs.js for Course CPT meta boxes.
  * UPDATED in v3.2.4: Added sub-tabs.css and sub-tabs.js for Settings sub-tabs.
+ * FIXED in v3.2.5: Fixed should_load_assets() with fallback logic for early initialization.
  *
  * @package    SAW_LMS
  * @subpackage SAW_LMS/admin
  * @since      1.0.0
- * @version    3.2.4
+ * @version    3.2.5
  */
 
 // If this file is called directly, abort.
@@ -234,8 +235,11 @@ class SAW_LMS_Admin_Assets {
 	/**
 	 * Determine if assets should be loaded
 	 *
-	 * Načteme assety pouze na SAW LMS admin stránkách
-	 * pro optimalizaci výkonu.
+	 * Načteme assety pouze na SAW LMS admin stránkách pro optimalizaci výkonu.
+	 *
+	 * FIXED in v3.2.5: Added fallback logic for early initialization.
+	 * Problem: get_current_screen() returns NULL when called too early (before 'current_screen' hook).
+	 * Solution: Use alternative detection methods when $screen is not available.
 	 *
 	 * @since  1.0.0
 	 * @return bool True if assets should be loaded.
@@ -246,18 +250,59 @@ class SAW_LMS_Admin_Assets {
 			return false;
 		}
 
-		// Get current screen.
+		// Get current screen - may be NULL during early initialization.
 		$screen = get_current_screen();
 
+		// ============================================================
+		// FALLBACK LOGIC: When get_current_screen() returns NULL
+		// ============================================================
 		if ( ! $screen ) {
+			global $pagenow;
+
+			// Method 1: Check $_GET['page'] parameter for SAW LMS admin pages.
+			$page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
+			if ( ! empty( $page ) && strpos( $page, 'saw-lms' ) === 0 ) {
+				return true;
+			}
+
+			// Method 2: Check $_GET['post_type'] for SAW LMS CPTs.
+			$post_type = isset( $_GET['post_type'] ) ? sanitize_text_field( wp_unslash( $_GET['post_type'] ) ) : '';
+			if ( ! empty( $post_type ) ) {
+				$saw_post_types = array( 'saw_course', 'saw_section', 'saw_lesson', 'saw_quiz' );
+				if ( in_array( $post_type, $saw_post_types, true ) ) {
+					return true;
+				}
+			}
+
+			// Method 3: Check for post editing (post.php, post-new.php).
+			if ( isset( $pagenow ) && in_array( $pagenow, array( 'post.php', 'post-new.php' ), true ) ) {
+				// For post.php - check existing post.
+				$post_id = isset( $_GET['post'] ) ? intval( $_GET['post'] ) : 0;
+				if ( $post_id > 0 ) {
+					$post = get_post( $post_id );
+					if ( $post ) {
+						$saw_post_types = array( 'saw_course', 'saw_section', 'saw_lesson', 'saw_quiz' );
+						if ( in_array( $post->post_type, $saw_post_types, true ) ) {
+							return true;
+						}
+					}
+				}
+
+				// For post-new.php - already checked post_type above.
+			}
+
+			// If we can't determine the page type, don't load assets (conservative approach).
+			// This prevents loading assets on every admin page unnecessarily.
 			return false;
 		}
 
-		// Load on all SAW LMS pages.
-		// Check if page parameter starts with 'saw-lms'.
-		$page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
+		// ============================================================
+		// NORMAL LOGIC: When get_current_screen() is available
+		// ============================================================
 
-		if ( strpos( $page, 'saw-lms' ) === 0 ) {
+		// Load on all SAW LMS admin pages.
+		$page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
+		if ( ! empty( $page ) && strpos( $page, 'saw-lms' ) === 0 ) {
 			return true;
 		}
 
