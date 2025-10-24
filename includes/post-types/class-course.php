@@ -1,41 +1,80 @@
 <?php
 /**
- * Course Post Type
+ * Course Custom Post Type
+ *
+ * Handles registration and functionality for the Course CPT.
  *
  * @package     SAW_LMS
  * @subpackage  Post_Types
- * @since       1.0.0
+ * @since       2.1.0
+ * @version     2.1.2
  */
 
+// Exit if accessed directly.
 if ( ! defined( 'ABSPATH' ) ) {
-	die;
+	exit;
 }
 
 /**
- * SAW_LMS_Course class
+ * SAW_LMS_Course Class
  *
- * Registers and manages the Course custom post type.
+ * Manages the Course custom post type including registration,
+ * meta boxes, admin columns, and course-specific functionality.
  *
- * @since 1.0.0
+ * @since 2.1.0
  */
 class SAW_LMS_Course {
 
 	/**
-	 * Constructor
+	 * Post type slug
 	 *
-	 * @since 1.0.0
+	 * @var string
 	 */
-	public function __construct() {
-		add_action( 'init', array( $this, 'register_post_type' ) );
-		add_action( 'init', array( $this, 'register_taxonomies' ) );
-		add_action( 'add_meta_boxes', array( $this, 'add_meta_boxes' ) );
-		add_action( 'save_post_saw_lms_course', array( $this, 'save_meta_boxes' ), 10, 2 );
+	const POST_TYPE = 'saw_course';
+
+	/**
+	 * Singleton instance
+	 *
+	 * @var SAW_LMS_Course|null
+	 */
+	private static $instance = null;
+
+	/**
+	 * Get singleton instance
+	 *
+	 * @return SAW_LMS_Course
+	 */
+	public static function init() {
+		if ( null === self::$instance ) {
+			self::$instance = new self();
+		}
+		return self::$instance;
 	}
 
 	/**
-	 * Register course post type
+	 * Constructor
 	 *
-	 * @since 1.0.0
+	 * Register hooks for the Course CPT.
+	 *
+	 * @since 2.1.0
+	 */
+	private function __construct() {
+		// Register post type
+		add_action( 'init', array( $this, 'register_post_type' ) );
+
+		// Register taxonomies
+		add_action( 'init', array( $this, 'register_taxonomies' ) );
+
+		// Meta boxes
+		add_action( 'add_meta_boxes', array( $this, 'add_meta_boxes' ) );
+		add_action( 'save_post_' . self::POST_TYPE, array( $this, 'save_meta_boxes' ), 10, 2 );
+	}
+
+	/**
+	 * Register Course post type
+	 *
+	 * @since 2.1.0
+	 * @return void
 	 */
 	public function register_post_type() {
 		$labels = array(
@@ -76,9 +115,9 @@ class SAW_LMS_Course {
 			'hierarchical'        => false,
 			'public'              => true,
 			'show_ui'             => true,
-			'show_in_menu'        => true,
+			'show_in_menu'        => false, // We'll add to custom menu
 			'menu_position'       => 5,
-			'menu_icon'           => 'dashicons-welcome-learn-more',
+			'menu_icon'           => 'dashicons-book-alt',
 			'show_in_admin_bar'   => true,
 			'show_in_nav_menus'   => true,
 			'can_export'          => true,
@@ -90,16 +129,17 @@ class SAW_LMS_Course {
 			'rewrite'             => array( 'slug' => 'courses' ),
 		);
 
-		register_post_type( 'saw_lms_course', $args );
+		register_post_type( self::POST_TYPE, $args );
 	}
 
 	/**
 	 * Register course taxonomies
 	 *
-	 * @since 1.0.0
+	 * @since 2.1.0
+	 * @return void
 	 */
 	public function register_taxonomies() {
-		// Course Category.
+		// Course Category
 		$category_labels = array(
 			'name'              => _x( 'Course Categories', 'taxonomy general name', 'saw-lms' ),
 			'singular_name'     => _x( 'Course Category', 'taxonomy singular name', 'saw-lms' ),
@@ -126,25 +166,22 @@ class SAW_LMS_Course {
 			'rewrite'           => array( 'slug' => 'course-category' ),
 		);
 
-		register_taxonomy( 'saw_lms_course_category', array( 'saw_lms_course' ), $category_args );
+		register_taxonomy( 'saw_course_category', array( self::POST_TYPE ), $category_args );
 
-		// Course Tag.
+		// Course Tag
 		$tag_labels = array(
 			'name'                       => _x( 'Course Tags', 'taxonomy general name', 'saw-lms' ),
 			'singular_name'              => _x( 'Course Tag', 'taxonomy singular name', 'saw-lms' ),
 			'search_items'               => __( 'Search Course Tags', 'saw-lms' ),
 			'popular_items'              => __( 'Popular Course Tags', 'saw-lms' ),
 			'all_items'                  => __( 'All Course Tags', 'saw-lms' ),
-			'parent_item'                => null,
-			'parent_item_colon'          => null,
 			'edit_item'                  => __( 'Edit Course Tag', 'saw-lms' ),
 			'update_item'                => __( 'Update Course Tag', 'saw-lms' ),
 			'add_new_item'               => __( 'Add New Course Tag', 'saw-lms' ),
 			'new_item_name'              => __( 'New Course Tag Name', 'saw-lms' ),
-			'separate_items_with_commas' => __( 'Separate course tags with commas', 'saw-lms' ),
-			'add_or_remove_items'        => __( 'Add or remove course tags', 'saw-lms' ),
-			'choose_from_most_used'      => __( 'Choose from the most used course tags', 'saw-lms' ),
-			'not_found'                  => __( 'No course tags found.', 'saw-lms' ),
+			'separate_items_with_commas' => __( 'Separate tags with commas', 'saw-lms' ),
+			'add_or_remove_items'        => __( 'Add or remove tags', 'saw-lms' ),
+			'choose_from_most_used'      => __( 'Choose from most used tags', 'saw-lms' ),
 			'menu_name'                  => __( 'Tags', 'saw-lms' ),
 		);
 
@@ -160,99 +197,93 @@ class SAW_LMS_Course {
 			'rewrite'           => array( 'slug' => 'course-tag' ),
 		);
 
-		register_taxonomy( 'saw_lms_course_tag', array( 'saw_lms_course' ), $tag_args );
+		register_taxonomy( 'saw_course_tag', array( self::POST_TYPE ), $tag_args );
 	}
 
 	/**
 	 * Add meta boxes
 	 *
-	 * @since 1.0.0
+	 * @since 2.1.0
+	 * @return void
 	 */
 	public function add_meta_boxes() {
 		add_meta_box(
-			'saw_lms_course_details',
-			__( 'Course Details', 'saw-lms' ),
-			array( $this, 'render_course_details_meta_box' ),
-			'saw_lms_course',
+			'saw_course_settings',
+			__( 'Course Settings', 'saw-lms' ),
+			array( $this, 'render_settings_meta_box' ),
+			self::POST_TYPE,
 			'normal',
 			'high'
 		);
 	}
 
 	/**
-	 * Render course details meta box
+	 * Render Course Settings meta box
 	 *
-	 * @since 1.0.0
+	 * @since 2.1.0
 	 * @param WP_Post $post Current post object.
+	 * @return void
 	 */
-	public function render_course_details_meta_box( $post ) {
-		wp_nonce_field( 'saw_lms_course_details_nonce', 'saw_lms_course_details_nonce' );
+	public function render_settings_meta_box( $post ) {
+		wp_nonce_field( 'saw_course_settings', 'saw_course_settings_nonce' );
 
-		$level    = get_post_meta( $post->ID, '_saw_lms_course_level', true );
-		$duration = get_post_meta( $post->ID, '_saw_lms_course_duration', true );
-		$price    = get_post_meta( $post->ID, '_saw_lms_course_price', true );
-
+		$duration        = get_post_meta( $post->ID, '_saw_lms_duration', true );
+		$pass_percentage = get_post_meta( $post->ID, '_saw_lms_pass_percentage', true );
 		?>
-		<div class="saw-lms-meta-box">
-			<p>
-				<label for="saw_lms_course_level"><?php esc_html_e( 'Course Level:', 'saw-lms' ); ?></label>
-				<select id="saw_lms_course_level" name="saw_lms_course_level" class="form-select">
-					<option value="beginner" <?php selected( $level, 'beginner' ); ?>><?php esc_html_e( 'Beginner', 'saw-lms' ); ?></option>
-					<option value="intermediate" <?php selected( $level, 'intermediate' ); ?>><?php esc_html_e( 'Intermediate', 'saw-lms' ); ?></option>
-					<option value="advanced" <?php selected( $level, 'advanced' ); ?>><?php esc_html_e( 'Advanced', 'saw-lms' ); ?></option>
-				</select>
-			</p>
-
-			<p>
-				<label for="saw_lms_course_duration"><?php esc_html_e( 'Course Duration (hours):', 'saw-lms' ); ?></label>
-				<input type="number" id="saw_lms_course_duration" name="saw_lms_course_duration" class="form-input" value="<?php echo esc_attr( $duration ); ?>" min="0" step="0.5">
-			</p>
-
-			<p>
-				<label for="saw_lms_course_price"><?php esc_html_e( 'Course Price:', 'saw-lms' ); ?></label>
-				<input type="number" id="saw_lms_course_price" name="saw_lms_course_price" class="form-input" value="<?php echo esc_attr( $price ); ?>" min="0" step="0.01">
-			</p>
-		</div>
+		<table class="form-table">
+			<tr>
+				<th><label for="saw_lms_duration"><?php esc_html_e( 'Duration (minutes)', 'saw-lms' ); ?></label></th>
+				<td>
+					<input type="number" id="saw_lms_duration" name="saw_lms_duration" value="<?php echo esc_attr( $duration ); ?>" class="regular-text" min="0" />
+				</td>
+			</tr>
+			<tr>
+				<th><label for="saw_lms_pass_percentage"><?php esc_html_e( 'Pass Percentage', 'saw-lms' ); ?></label></th>
+				<td>
+					<input type="number" id="saw_lms_pass_percentage" name="saw_lms_pass_percentage" value="<?php echo esc_attr( $pass_percentage ? $pass_percentage : 70 ); ?>" class="regular-text" min="0" max="100" />
+					<p class="description"><?php esc_html_e( 'Minimum percentage required to pass the course.', 'saw-lms' ); ?></p>
+				</td>
+			</tr>
+		</table>
 		<?php
 	}
 
 	/**
 	 * Save meta boxes
 	 *
-	 * @since 1.0.0
+	 * @since 2.1.0
 	 * @param int     $post_id Post ID.
-	 * @param WP_Post $post Post object.
+	 * @param WP_Post $post    Post object.
+	 * @return void
 	 */
 	public function save_meta_boxes( $post_id, $post ) {
-		if ( ! isset( $_POST['saw_lms_course_details_nonce'] ) ) {
+		// Verify nonce
+		if ( ! isset( $_POST['saw_course_settings_nonce'] ) || ! wp_verify_nonce( $_POST['saw_course_settings_nonce'], 'saw_course_settings' ) ) {
 			return;
 		}
 
-		if ( ! wp_verify_nonce( $_POST['saw_lms_course_details_nonce'], 'saw_lms_course_details_nonce' ) ) {
-			return;
-		}
-
+		// Check autosave
 		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
 			return;
 		}
 
+		// Check permissions
 		if ( ! current_user_can( 'edit_post', $post_id ) ) {
 			return;
 		}
 
-		if ( isset( $_POST['saw_lms_course_level'] ) ) {
-			update_post_meta( $post_id, '_saw_lms_course_level', sanitize_text_field( $_POST['saw_lms_course_level'] ) );
+		// Save duration
+		if ( isset( $_POST['saw_lms_duration'] ) ) {
+			update_post_meta( $post_id, '_saw_lms_duration', absint( $_POST['saw_lms_duration'] ) );
 		}
 
-		if ( isset( $_POST['saw_lms_course_duration'] ) ) {
-			update_post_meta( $post_id, '_saw_lms_course_duration', absint( $_POST['saw_lms_course_duration'] ) );
+		// Save pass percentage
+		if ( isset( $_POST['saw_lms_pass_percentage'] ) ) {
+			$percentage = absint( $_POST['saw_lms_pass_percentage'] );
+			if ( $percentage > 100 ) {
+				$percentage = 100;
+			}
+			update_post_meta( $post_id, '_saw_lms_pass_percentage', $percentage );
 		}
-
-		if ( isset( $_POST['saw_lms_course_price'] ) ) {
-			update_post_meta( $post_id, '_saw_lms_course_price', floatval( $_POST['saw_lms_course_price'] ) );
-		}
-
-		$course_model = SAW_LMS_Model_Loader::get_course_model();
-		$course_model->get_course( $post_id, true );
 	}
 }

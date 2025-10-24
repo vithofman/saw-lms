@@ -1,40 +1,69 @@
 <?php
 /**
- * Quiz Post Type
+ * Quiz Custom Post Type
  *
  * @package     SAW_LMS
  * @subpackage  Post_Types
- * @since       1.0.0
+ * @since       2.1.0
+ * @version     2.1.2
  */
 
+// Exit if accessed directly.
 if ( ! defined( 'ABSPATH' ) ) {
-	die;
+	exit;
 }
 
 /**
  * SAW_LMS_Quiz class
  *
- * Registers and manages the Quiz custom post type.
+ * Manages the Quiz custom post type.
  *
- * @since 1.0.0
+ * @since 2.1.0
  */
 class SAW_LMS_Quiz {
 
 	/**
+	 * Post type slug
+	 *
+	 * @var string
+	 */
+	const POST_TYPE = 'saw_quiz';
+
+	/**
+	 * Singleton instance
+	 *
+	 * @var SAW_LMS_Quiz|null
+	 */
+	private static $instance = null;
+
+	/**
+	 * Get singleton instance
+	 *
+	 * @return SAW_LMS_Quiz
+	 */
+	public static function init() {
+		if ( null === self::$instance ) {
+			self::$instance = new self();
+		}
+		return self::$instance;
+	}
+
+	/**
 	 * Constructor
 	 *
-	 * @since 1.0.0
+	 * @since 2.1.0
 	 */
-	public function __construct() {
+	private function __construct() {
 		add_action( 'init', array( $this, 'register_post_type' ) );
 		add_action( 'add_meta_boxes', array( $this, 'add_meta_boxes' ) );
-		add_action( 'save_post_saw_lms_quiz', array( $this, 'save_meta_boxes' ), 10, 2 );
+		add_action( 'save_post_' . self::POST_TYPE, array( $this, 'save_meta_boxes' ), 10, 2 );
 	}
 
 	/**
 	 * Register quiz post type
 	 *
-	 * @since 1.0.0
+	 * @since 2.1.0
+	 * @return void
 	 */
 	public function register_post_type() {
 		$labels = array(
@@ -62,11 +91,11 @@ class SAW_LMS_Quiz {
 			'label'               => __( 'Quiz', 'saw-lms' ),
 			'description'         => __( 'Course Quizzes', 'saw-lms' ),
 			'labels'              => $labels,
-			'supports'            => array( 'title', 'editor', 'page-attributes' ),
+			'supports'            => array( 'title', 'editor' ),
 			'hierarchical'        => false,
 			'public'              => false,
 			'show_ui'             => true,
-			'show_in_menu'        => 'edit.php?post_type=saw_lms_course',
+			'show_in_menu'        => false, // We'll add to custom menu
 			'show_in_admin_bar'   => true,
 			'show_in_nav_menus'   => false,
 			'can_export'          => true,
@@ -77,20 +106,21 @@ class SAW_LMS_Quiz {
 			'show_in_rest'        => true,
 		);
 
-		register_post_type( 'saw_lms_quiz', $args );
+		register_post_type( self::POST_TYPE, $args );
 	}
 
 	/**
 	 * Add meta boxes
 	 *
-	 * @since 1.0.0
+	 * @since 2.1.0
+	 * @return void
 	 */
 	public function add_meta_boxes() {
 		add_meta_box(
-			'saw_lms_quiz_settings',
+			'saw_quiz_settings',
 			__( 'Quiz Settings', 'saw-lms' ),
-			array( $this, 'render_quiz_settings_meta_box' ),
-			'saw_lms_quiz',
+			array( $this, 'render_settings_meta_box' ),
+			self::POST_TYPE,
 			'normal',
 			'high'
 		);
@@ -99,57 +129,70 @@ class SAW_LMS_Quiz {
 	/**
 	 * Render quiz settings meta box
 	 *
-	 * @since 1.0.0
+	 * @since 2.1.0
 	 * @param WP_Post $post Current post object.
+	 * @return void
 	 */
-	public function render_quiz_settings_meta_box( $post ) {
-		wp_nonce_field( 'saw_lms_quiz_settings_nonce', 'saw_lms_quiz_settings_nonce' );
+	public function render_settings_meta_box( $post ) {
+		wp_nonce_field( 'saw_quiz_settings', 'saw_quiz_settings_nonce' );
 
-		$passing_grade       = get_post_meta( $post->ID, '_saw_lms_passing_grade', true );
-		$time_limit          = get_post_meta( $post->ID, '_saw_lms_time_limit', true );
-		$max_attempts        = get_post_meta( $post->ID, '_saw_lms_max_attempts', true );
-		$randomize_questions = get_post_meta( $post->ID, '_saw_lms_randomize_questions', true );
-
+		$section_id      = get_post_meta( $post->ID, '_saw_lms_section_id', true );
+		$pass_percentage = get_post_meta( $post->ID, '_saw_lms_pass_percentage', true );
+		$time_limit      = get_post_meta( $post->ID, '_saw_lms_time_limit', true );
+		$max_attempts    = get_post_meta( $post->ID, '_saw_lms_max_attempts', true );
 		?>
-		<div class="saw-lms-meta-box">
-			<p>
-				<label for="saw_lms_passing_grade"><?php esc_html_e( 'Passing Grade (%):', 'saw-lms' ); ?></label>
-				<input type="number" id="saw_lms_passing_grade" name="saw_lms_passing_grade" class="form-input" value="<?php echo esc_attr( $passing_grade ? $passing_grade : 70 ); ?>" min="0" max="100">
-			</p>
-
-			<p>
-				<label for="saw_lms_time_limit"><?php esc_html_e( 'Time Limit (minutes, 0 = no limit):', 'saw-lms' ); ?></label>
-				<input type="number" id="saw_lms_time_limit" name="saw_lms_time_limit" class="form-input" value="<?php echo esc_attr( $time_limit ); ?>" min="0">
-			</p>
-
-			<p>
-				<label for="saw_lms_max_attempts"><?php esc_html_e( 'Maximum Attempts (0 = unlimited):', 'saw-lms' ); ?></label>
-				<input type="number" id="saw_lms_max_attempts" name="saw_lms_max_attempts" class="form-input" value="<?php echo esc_attr( $max_attempts ); ?>" min="0">
-			</p>
-
-			<p>
-				<label class="form-checkbox">
-					<input type="checkbox" id="saw_lms_randomize_questions" name="saw_lms_randomize_questions" value="1" <?php checked( $randomize_questions, '1' ); ?>>
-					<span><?php esc_html_e( 'Randomize Question Order', 'saw-lms' ); ?></span>
-				</label>
-			</p>
-		</div>
+		<table class="form-table">
+			<tr>
+				<th><label for="saw_lms_section_id"><?php esc_html_e( 'Section', 'saw-lms' ); ?></label></th>
+				<td>
+					<?php
+					wp_dropdown_pages(
+						array(
+							'post_type'        => 'saw_section',
+							'selected'         => $section_id,
+							'name'             => 'saw_lms_section_id',
+							'id'               => 'saw_lms_section_id',
+							'show_option_none' => __( 'Select Section', 'saw-lms' ),
+						)
+					);
+					?>
+				</td>
+			</tr>
+			<tr>
+				<th><label for="saw_lms_pass_percentage"><?php esc_html_e( 'Pass Percentage', 'saw-lms' ); ?></label></th>
+				<td>
+					<input type="number" id="saw_lms_pass_percentage" name="saw_lms_pass_percentage" value="<?php echo esc_attr( $pass_percentage ? $pass_percentage : 70 ); ?>" class="regular-text" min="0" max="100" />
+					<p class="description"><?php esc_html_e( 'Minimum percentage required to pass the quiz.', 'saw-lms' ); ?></p>
+				</td>
+			</tr>
+			<tr>
+				<th><label for="saw_lms_time_limit"><?php esc_html_e( 'Time Limit (minutes)', 'saw-lms' ); ?></label></th>
+				<td>
+					<input type="number" id="saw_lms_time_limit" name="saw_lms_time_limit" value="<?php echo esc_attr( $time_limit ); ?>" class="regular-text" min="0" />
+					<p class="description"><?php esc_html_e( 'Leave empty for no time limit.', 'saw-lms' ); ?></p>
+				</td>
+			</tr>
+			<tr>
+				<th><label for="saw_lms_max_attempts"><?php esc_html_e( 'Maximum Attempts', 'saw-lms' ); ?></label></th>
+				<td>
+					<input type="number" id="saw_lms_max_attempts" name="saw_lms_max_attempts" value="<?php echo esc_attr( $max_attempts ? $max_attempts : 3 ); ?>" class="regular-text" min="1" />
+					<p class="description"><?php esc_html_e( 'Maximum number of attempts allowed.', 'saw-lms' ); ?></p>
+				</td>
+			</tr>
+		</table>
 		<?php
 	}
 
 	/**
 	 * Save meta boxes
 	 *
-	 * @since 1.0.0
+	 * @since 2.1.0
 	 * @param int     $post_id Post ID.
-	 * @param WP_Post $post Post object.
+	 * @param WP_Post $post    Post object.
+	 * @return void
 	 */
 	public function save_meta_boxes( $post_id, $post ) {
-		if ( ! isset( $_POST['saw_lms_quiz_settings_nonce'] ) ) {
-			return;
-		}
-
-		if ( ! wp_verify_nonce( $_POST['saw_lms_quiz_settings_nonce'], 'saw_lms_quiz_settings_nonce' ) ) {
+		if ( ! isset( $_POST['saw_quiz_settings_nonce'] ) || ! wp_verify_nonce( $_POST['saw_quiz_settings_nonce'], 'saw_quiz_settings' ) ) {
 			return;
 		}
 
@@ -161,8 +204,16 @@ class SAW_LMS_Quiz {
 			return;
 		}
 
-		if ( isset( $_POST['saw_lms_passing_grade'] ) ) {
-			update_post_meta( $post_id, '_saw_lms_passing_grade', absint( $_POST['saw_lms_passing_grade'] ) );
+		if ( isset( $_POST['saw_lms_section_id'] ) ) {
+			update_post_meta( $post_id, '_saw_lms_section_id', absint( $_POST['saw_lms_section_id'] ) );
+		}
+
+		if ( isset( $_POST['saw_lms_pass_percentage'] ) ) {
+			$percentage = absint( $_POST['saw_lms_pass_percentage'] );
+			if ( $percentage > 100 ) {
+				$percentage = 100;
+			}
+			update_post_meta( $post_id, '_saw_lms_pass_percentage', $percentage );
 		}
 
 		if ( isset( $_POST['saw_lms_time_limit'] ) ) {
@@ -170,13 +221,11 @@ class SAW_LMS_Quiz {
 		}
 
 		if ( isset( $_POST['saw_lms_max_attempts'] ) ) {
-			update_post_meta( $post_id, '_saw_lms_max_attempts', absint( $_POST['saw_lms_max_attempts'] ) );
+			$attempts = absint( $_POST['saw_lms_max_attempts'] );
+			if ( $attempts < 1 ) {
+				$attempts = 1;
+			}
+			update_post_meta( $post_id, '_saw_lms_max_attempts', $attempts );
 		}
-
-		$randomize = isset( $_POST['saw_lms_randomize_questions'] ) ? '1' : '0';
-		update_post_meta( $post_id, '_saw_lms_randomize_questions', $randomize );
-
-		$quiz_model = SAW_LMS_Model_Loader::get_quiz_model();
-		$quiz_model->get_quiz( $post_id, true );
 	}
 }

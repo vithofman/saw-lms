@@ -1,40 +1,69 @@
 <?php
 /**
- * Lesson Post Type
+ * Lesson Custom Post Type
  *
  * @package     SAW_LMS
  * @subpackage  Post_Types
- * @since       1.0.0
+ * @since       2.1.0
+ * @version     2.1.2
  */
 
+// Exit if accessed directly.
 if ( ! defined( 'ABSPATH' ) ) {
-	die;
+	exit;
 }
 
 /**
  * SAW_LMS_Lesson class
  *
- * Registers and manages the Lesson custom post type.
+ * Manages the Lesson custom post type.
  *
- * @since 1.0.0
+ * @since 2.1.0
  */
 class SAW_LMS_Lesson {
 
 	/**
+	 * Post type slug
+	 *
+	 * @var string
+	 */
+	const POST_TYPE = 'saw_lesson';
+
+	/**
+	 * Singleton instance
+	 *
+	 * @var SAW_LMS_Lesson|null
+	 */
+	private static $instance = null;
+
+	/**
+	 * Get singleton instance
+	 *
+	 * @return SAW_LMS_Lesson
+	 */
+	public static function init() {
+		if ( null === self::$instance ) {
+			self::$instance = new self();
+		}
+		return self::$instance;
+	}
+
+	/**
 	 * Constructor
 	 *
-	 * @since 1.0.0
+	 * @since 2.1.0
 	 */
-	public function __construct() {
+	private function __construct() {
 		add_action( 'init', array( $this, 'register_post_type' ) );
 		add_action( 'add_meta_boxes', array( $this, 'add_meta_boxes' ) );
-		add_action( 'save_post_saw_lms_lesson', array( $this, 'save_meta_boxes' ), 10, 2 );
+		add_action( 'save_post_' . self::POST_TYPE, array( $this, 'save_meta_boxes' ), 10, 2 );
 	}
 
 	/**
 	 * Register lesson post type
 	 *
-	 * @since 1.0.0
+	 * @since 2.1.0
+	 * @return void
 	 */
 	public function register_post_type() {
 		$labels = array(
@@ -66,7 +95,7 @@ class SAW_LMS_Lesson {
 			'hierarchical'        => false,
 			'public'              => false,
 			'show_ui'             => true,
-			'show_in_menu'        => 'edit.php?post_type=saw_lms_course',
+			'show_in_menu'        => false, // We'll add to custom menu
 			'show_in_admin_bar'   => true,
 			'show_in_nav_menus'   => false,
 			'can_export'          => true,
@@ -77,20 +106,21 @@ class SAW_LMS_Lesson {
 			'show_in_rest'        => true,
 		);
 
-		register_post_type( 'saw_lms_lesson', $args );
+		register_post_type( self::POST_TYPE, $args );
 	}
 
 	/**
 	 * Add meta boxes
 	 *
-	 * @since 1.0.0
+	 * @since 2.1.0
+	 * @return void
 	 */
 	public function add_meta_boxes() {
 		add_meta_box(
-			'saw_lms_lesson_details',
+			'saw_lesson_details',
 			__( 'Lesson Details', 'saw-lms' ),
-			array( $this, 'render_lesson_details_meta_box' ),
-			'saw_lms_lesson',
+			array( $this, 'render_details_meta_box' ),
+			self::POST_TYPE,
 			'normal',
 			'high'
 		);
@@ -99,46 +129,67 @@ class SAW_LMS_Lesson {
 	/**
 	 * Render lesson details meta box
 	 *
-	 * @since 1.0.0
+	 * @since 2.1.0
 	 * @param WP_Post $post Current post object.
+	 * @return void
 	 */
-	public function render_lesson_details_meta_box( $post ) {
-		wp_nonce_field( 'saw_lms_lesson_details_nonce', 'saw_lms_lesson_details_nonce' );
+	public function render_details_meta_box( $post ) {
+		wp_nonce_field( 'saw_lesson_details', 'saw_lesson_details_nonce' );
 
+		$section_id   = get_post_meta( $post->ID, '_saw_lms_section_id', true );
 		$lesson_type  = get_post_meta( $post->ID, '_saw_lms_lesson_type', true );
 		$video_url    = get_post_meta( $post->ID, '_saw_lms_video_url', true );
-		$video_length = get_post_meta( $post->ID, '_saw_lms_video_length', true );
-
+		$duration     = get_post_meta( $post->ID, '_saw_lms_duration', true );
 		?>
-		<div class="saw-lms-meta-box">
-			<p>
-				<label for="saw_lms_lesson_type"><?php esc_html_e( 'Lesson Type:', 'saw-lms' ); ?></label>
-				<select id="saw_lms_lesson_type" name="saw_lms_lesson_type" class="form-select">
-					<option value="text" <?php selected( $lesson_type, 'text' ); ?>><?php esc_html_e( 'Text', 'saw-lms' ); ?></option>
-					<option value="video" <?php selected( $lesson_type, 'video' ); ?>><?php esc_html_e( 'Video', 'saw-lms' ); ?></option>
-				</select>
-			</p>
-
-			<div id="saw_lms_video_fields" style="<?php echo 'video' !== $lesson_type ? 'display:none;' : ''; ?>">
-				<p>
-					<label for="saw_lms_video_url"><?php esc_html_e( 'Video URL:', 'saw-lms' ); ?></label>
-					<input type="url" id="saw_lms_video_url" name="saw_lms_video_url" class="form-input" value="<?php echo esc_url( $video_url ); ?>">
-				</p>
-
-				<p>
-					<label for="saw_lms_video_length"><?php esc_html_e( 'Video Length (minutes):', 'saw-lms' ); ?></label>
-					<input type="number" id="saw_lms_video_length" name="saw_lms_video_length" class="form-input" value="<?php echo esc_attr( $video_length ); ?>" min="0">
-				</p>
-			</div>
-		</div>
+		<table class="form-table">
+			<tr>
+				<th><label for="saw_lms_section_id"><?php esc_html_e( 'Section', 'saw-lms' ); ?></label></th>
+				<td>
+					<?php
+					wp_dropdown_pages(
+						array(
+							'post_type'        => 'saw_section',
+							'selected'         => $section_id,
+							'name'             => 'saw_lms_section_id',
+							'id'               => 'saw_lms_section_id',
+							'show_option_none' => __( 'Select Section', 'saw-lms' ),
+						)
+					);
+					?>
+				</td>
+			</tr>
+			<tr>
+				<th><label for="saw_lms_lesson_type"><?php esc_html_e( 'Lesson Type', 'saw-lms' ); ?></label></th>
+				<td>
+					<select name="saw_lms_lesson_type" id="saw_lms_lesson_type">
+						<option value="video" <?php selected( $lesson_type, 'video' ); ?>><?php esc_html_e( 'Video', 'saw-lms' ); ?></option>
+						<option value="text" <?php selected( $lesson_type, 'text' ); ?>><?php esc_html_e( 'Text/Article', 'saw-lms' ); ?></option>
+						<option value="document" <?php selected( $lesson_type, 'document' ); ?>><?php esc_html_e( 'Document/PDF', 'saw-lms' ); ?></option>
+					</select>
+				</td>
+			</tr>
+			<tr class="saw-lesson-video-field" style="<?php echo ( 'video' !== $lesson_type ) ? 'display:none;' : ''; ?>">
+				<th><label for="saw_lms_video_url"><?php esc_html_e( 'Video URL', 'saw-lms' ); ?></label></th>
+				<td>
+					<input type="url" id="saw_lms_video_url" name="saw_lms_video_url" value="<?php echo esc_attr( $video_url ); ?>" class="large-text" />
+					<p class="description"><?php esc_html_e( 'YouTube, Vimeo, or direct video URL', 'saw-lms' ); ?></p>
+				</td>
+			</tr>
+			<tr>
+				<th><label for="saw_lms_duration"><?php esc_html_e( 'Duration (minutes)', 'saw-lms' ); ?></label></th>
+				<td>
+					<input type="number" id="saw_lms_duration" name="saw_lms_duration" value="<?php echo esc_attr( $duration ); ?>" class="regular-text" min="0" />
+				</td>
+			</tr>
+		</table>
 
 		<script>
 		jQuery(document).ready(function($) {
 			$('#saw_lms_lesson_type').on('change', function() {
 				if ($(this).val() === 'video') {
-					$('#saw_lms_video_fields').show();
+					$('.saw-lesson-video-field').show();
 				} else {
-					$('#saw_lms_video_fields').hide();
+					$('.saw-lesson-video-field').hide();
 				}
 			});
 		});
@@ -149,16 +200,13 @@ class SAW_LMS_Lesson {
 	/**
 	 * Save meta boxes
 	 *
-	 * @since 1.0.0
+	 * @since 2.1.0
 	 * @param int     $post_id Post ID.
-	 * @param WP_Post $post Post object.
+	 * @param WP_Post $post    Post object.
+	 * @return void
 	 */
 	public function save_meta_boxes( $post_id, $post ) {
-		if ( ! isset( $_POST['saw_lms_lesson_details_nonce'] ) ) {
-			return;
-		}
-
-		if ( ! wp_verify_nonce( $_POST['saw_lms_lesson_details_nonce'], 'saw_lms_lesson_details_nonce' ) ) {
+		if ( ! isset( $_POST['saw_lesson_details_nonce'] ) || ! wp_verify_nonce( $_POST['saw_lesson_details_nonce'], 'saw_lesson_details' ) ) {
 			return;
 		}
 
@@ -170,6 +218,10 @@ class SAW_LMS_Lesson {
 			return;
 		}
 
+		if ( isset( $_POST['saw_lms_section_id'] ) ) {
+			update_post_meta( $post_id, '_saw_lms_section_id', absint( $_POST['saw_lms_section_id'] ) );
+		}
+
 		if ( isset( $_POST['saw_lms_lesson_type'] ) ) {
 			update_post_meta( $post_id, '_saw_lms_lesson_type', sanitize_text_field( $_POST['saw_lms_lesson_type'] ) );
 		}
@@ -178,11 +230,8 @@ class SAW_LMS_Lesson {
 			update_post_meta( $post_id, '_saw_lms_video_url', esc_url_raw( $_POST['saw_lms_video_url'] ) );
 		}
 
-		if ( isset( $_POST['saw_lms_video_length'] ) ) {
-			update_post_meta( $post_id, '_saw_lms_video_length', absint( $_POST['saw_lms_video_length'] ) );
+		if ( isset( $_POST['saw_lms_duration'] ) ) {
+			update_post_meta( $post_id, '_saw_lms_duration', absint( $_POST['saw_lms_duration'] ) );
 		}
-
-		$lesson_model = SAW_LMS_Model_Loader::get_lesson_model();
-		$lesson_model->get_lesson( $post_id, true );
 	}
 }

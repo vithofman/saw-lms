@@ -1,39 +1,69 @@
 <?php
 /**
- * Section Post Type
+ * Section Custom Post Type
  *
  * @package     SAW_LMS
  * @subpackage  Post_Types
- * @since       1.0.0
+ * @since       2.1.0
+ * @version     2.1.2
  */
 
+// Exit if accessed directly.
 if ( ! defined( 'ABSPATH' ) ) {
-	die;
+	exit;
 }
 
 /**
  * SAW_LMS_Section class
  *
- * Registers and manages the Section custom post type.
+ * Manages the Section custom post type.
  *
- * @since 1.0.0
+ * @since 2.1.0
  */
 class SAW_LMS_Section {
 
 	/**
+	 * Post type slug
+	 *
+	 * @var string
+	 */
+	const POST_TYPE = 'saw_section';
+
+	/**
+	 * Singleton instance
+	 *
+	 * @var SAW_LMS_Section|null
+	 */
+	private static $instance = null;
+
+	/**
+	 * Get singleton instance
+	 *
+	 * @return SAW_LMS_Section
+	 */
+	public static function init() {
+		if ( null === self::$instance ) {
+			self::$instance = new self();
+		}
+		return self::$instance;
+	}
+
+	/**
 	 * Constructor
 	 *
-	 * @since 1.0.0
+	 * @since 2.1.0
 	 */
-	public function __construct() {
+	private function __construct() {
 		add_action( 'init', array( $this, 'register_post_type' ) );
-		add_action( 'save_post_saw_lms_section', array( $this, 'invalidate_cache' ), 10, 2 );
+		add_action( 'add_meta_boxes', array( $this, 'add_meta_boxes' ) );
+		add_action( 'save_post_' . self::POST_TYPE, array( $this, 'save_meta_boxes' ), 10, 2 );
 	}
 
 	/**
 	 * Register section post type
 	 *
-	 * @since 1.0.0
+	 * @since 2.1.0
+	 * @return void
 	 */
 	public function register_post_type() {
 		$labels = array(
@@ -65,7 +95,7 @@ class SAW_LMS_Section {
 			'hierarchical'        => false,
 			'public'              => false,
 			'show_ui'             => true,
-			'show_in_menu'        => 'edit.php?post_type=saw_lms_course',
+			'show_in_menu'        => false, // We'll add to custom menu
 			'show_in_admin_bar'   => true,
 			'show_in_nav_menus'   => false,
 			'can_export'          => true,
@@ -76,22 +106,82 @@ class SAW_LMS_Section {
 			'show_in_rest'        => true,
 		);
 
-		register_post_type( 'saw_lms_section', $args );
+		register_post_type( self::POST_TYPE, $args );
 	}
 
 	/**
-	 * Invalidate cache on save
+	 * Add meta boxes
 	 *
-	 * @since 1.0.0
-	 * @param int     $post_id Post ID.
-	 * @param WP_Post $post Post object.
+	 * @since 2.1.0
+	 * @return void
 	 */
-	public function invalidate_cache( $post_id, $post ) {
+	public function add_meta_boxes() {
+		add_meta_box(
+			'saw_section_details',
+			__( 'Section Details', 'saw-lms' ),
+			array( $this, 'render_details_meta_box' ),
+			self::POST_TYPE,
+			'normal',
+			'high'
+		);
+	}
+
+	/**
+	 * Render section details meta box
+	 *
+	 * @since 2.1.0
+	 * @param WP_Post $post Current post object.
+	 * @return void
+	 */
+	public function render_details_meta_box( $post ) {
+		wp_nonce_field( 'saw_section_details', 'saw_section_details_nonce' );
+
+		$course_id = get_post_meta( $post->ID, '_saw_lms_course_id', true );
+		?>
+		<table class="form-table">
+			<tr>
+				<th><label for="saw_lms_course_id"><?php esc_html_e( 'Course', 'saw-lms' ); ?></label></th>
+				<td>
+					<?php
+					wp_dropdown_pages(
+						array(
+							'post_type'        => 'saw_course',
+							'selected'         => $course_id,
+							'name'             => 'saw_lms_course_id',
+							'id'               => 'saw_lms_course_id',
+							'show_option_none' => __( 'Select Course', 'saw-lms' ),
+						)
+					);
+					?>
+				</td>
+			</tr>
+		</table>
+		<?php
+	}
+
+	/**
+	 * Save meta boxes
+	 *
+	 * @since 2.1.0
+	 * @param int     $post_id Post ID.
+	 * @param WP_Post $post    Post object.
+	 * @return void
+	 */
+	public function save_meta_boxes( $post_id, $post ) {
+		if ( ! isset( $_POST['saw_section_details_nonce'] ) || ! wp_verify_nonce( $_POST['saw_section_details_nonce'], 'saw_section_details' ) ) {
+			return;
+		}
+
 		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
 			return;
 		}
 
-		$section_model = SAW_LMS_Model_Loader::get_section_model();
-		$section_model->get_section( $post_id, true );
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			return;
+		}
+
+		if ( isset( $_POST['saw_lms_course_id'] ) ) {
+			update_post_meta( $post_id, '_saw_lms_course_id', absint( $_POST['saw_lms_course_id'] ) );
+		}
 	}
 }

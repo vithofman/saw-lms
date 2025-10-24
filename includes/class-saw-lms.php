@@ -1,194 +1,454 @@
 <?php
 /**
- * Main Plugin Class
+ * The core plugin class
  *
- * @package     SAW_LMS
- * @since       1.0.0
+ * This is used to define internationalization, admin-specific hooks, and
+ * public-facing site hooks.
+ *
+ * UPDATED in Phase 1.9: Added Admin Assets loader for new design system.
+ * UPDATED in Phase 2.1: Added Custom Post Types initialization.
+ * EMERGENCY FIX v2.1.2: Moved initialization to 'plugins_loaded' hook to prevent timing issues.
+ * FIXED: Added file_exists() checks before loading CPT files to prevent fatal errors.
+ *
+ * @package    SAW_LMS
+ * @subpackage SAW_LMS/includes
+ * @since      1.0.0
+ * @version    2.1.2
  */
 
-if ( ! defined( 'ABSPATH' ) ) {
+// If this file is called directly, abort.
+if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
 /**
- * SAW_LMS class
+ * SAW_LMS Class
  *
- * Main plugin class that handles initialization and loading.
+ * Main plugin class (Singleton)
  *
  * @since 1.0.0
  */
-final class SAW_LMS {
+class SAW_LMS {
 
 	/**
-	 * Plugin instance
+	 * The loader that's responsible for maintaining and registering all hooks
 	 *
-	 * @var SAW_LMS
+	 * @since  1.0.0
+	 * @var    SAW_LMS_Loader
+	 */
+	protected $loader;
+
+	/**
+	 * The unique identifier of this plugin
+	 *
+	 * @since  1.0.0
+	 * @var    string
+	 */
+	protected $plugin_name;
+
+	/**
+	 * The current version of the plugin
+	 *
+	 * @since  1.0.0
+	 * @var    string
+	 */
+	protected $version;
+
+	/**
+	 * The single instance of the class
+	 *
+	 * @since  1.0.0
+	 * @var    SAW_LMS
 	 */
 	private static $instance = null;
 
 	/**
-	 * Cache manager instance
+	 * Error Handler instance
 	 *
-	 * @var SAW_LMS_Cache_Manager
+	 * @since  1.0.0
+	 * @var    SAW_LMS_Error_Handler
 	 */
-	public $cache_manager;
+	protected $error_handler;
 
 	/**
-	 * Get plugin instance
+	 * Logger instance
+	 *
+	 * @since  1.0.0
+	 * @var    SAW_LMS_Logger
+	 */
+	protected $logger;
+
+	/**
+	 * Cache Manager instance
+	 *
+	 * @since  1.0.0
+	 * @var    SAW_LMS_Cache_Manager
+	 */
+	protected $cache_manager;
+
+	/**
+	 * Get the singleton instance
 	 *
 	 * @since  1.0.0
 	 * @return SAW_LMS
 	 */
-	public static function get_instance() {
+	public static function init() {
 		if ( null === self::$instance ) {
 			self::$instance = new self();
 		}
-
 		return self::$instance;
 	}
 
 	/**
 	 * Constructor
 	 *
-	 * @since 1.0.0
-	 */
-	private function __construct() {
-		$this->define_constants();
-		$this->load_dependencies();
-		$this->init_hooks();
-	}
-
-	/**
-	 * Define plugin constants
+	 * EMERGENCY FIX v2.1.2: Minimal constructor - heavy lifting moved to 'plugins_loaded' hook
 	 *
 	 * @since 1.0.0
 	 */
-	private function define_constants() {
-		if ( ! defined( 'SAW_LMS_VERSION' ) ) {
-			define( 'SAW_LMS_VERSION', '1.0.0' );
-		}
+	private function __construct() {
+		$this->plugin_name = 'saw-lms';
+		$this->version     = SAW_LMS_VERSION;
 
-		if ( ! defined( 'SAW_LMS_DB_VERSION' ) ) {
-			define( 'SAW_LMS_DB_VERSION', '1.0.0' );
-		}
+		// Load core dependencies immediately (they're safe)
+		$this->load_dependencies();
 
-		if ( ! defined( 'SAW_LMS_PLUGIN_DIR' ) ) {
-			define( 'SAW_LMS_PLUGIN_DIR', plugin_dir_path( dirname( __FILE__ ) ) );
-		}
+		// ✅ CRITICAL FIX: Delay initialization until WordPress is fully loaded
+		// This prevents "Call to undefined function" errors
+		add_action( 'plugins_loaded', array( $this, 'initialize_plugin' ), 5 );
+	}
 
-		if ( ! defined( 'SAW_LMS_PLUGIN_URL' ) ) {
-			define( 'SAW_LMS_PLUGIN_URL', plugin_dir_url( dirname( __FILE__ ) ) );
-		}
+	/**
+	 * Initialize plugin after WordPress is fully loaded
+	 *
+	 * NEW in v2.1.2: Main initialization moved here from constructor
+	 *
+	 * @since 2.1.2
+	 */
+	public function initialize_plugin() {
+		// Now it's safe to use WordPress functions like wp_mail(), get_bloginfo(), etc.
+		$this->setup_error_handling();
+		$this->init_cache_system();
+		$this->init_post_types();
+		$this->set_locale();
+		$this->define_admin_hooks();
+		$this->define_public_hooks();
 
-		if ( ! defined( 'SAW_LMS_PLUGIN_FILE' ) ) {
-			define( 'SAW_LMS_PLUGIN_FILE', dirname( dirname( __FILE__ ) ) . '/saw-lms.php' );
+		// Run all registered hooks
+		if ( $this->loader ) {
+			$this->loader->run();
 		}
 	}
 
 	/**
-	 * Load plugin dependencies
+	 * Load the required dependencies
+	 *
+	 * UPDATED in Phase 1.9: Added Admin Assets loader.
+	 * UPDATED in v2.1.2: Only load files that are safe to load early.
 	 *
 	 * @since 1.0.0
 	 */
 	private function load_dependencies() {
-		// Core.
-		require_once SAW_LMS_PLUGIN_DIR . 'includes/class-autoloader.php';
+		/**
+		 * Core classes (safe to load early)
+		 */
+		require_once SAW_LMS_PLUGIN_DIR . 'includes/class-loader.php';
+		require_once SAW_LMS_PLUGIN_DIR . 'includes/core/class-error-handler.php';
+		require_once SAW_LMS_PLUGIN_DIR . 'includes/utilities/class-logger.php';
+		
+		// Only load functions.php if it exists
+		if ( file_exists( SAW_LMS_PLUGIN_DIR . 'includes/utilities/functions.php' ) ) {
+			require_once SAW_LMS_PLUGIN_DIR . 'includes/utilities/functions.php';
+		}
 
-		// Database.
-		require_once SAW_LMS_PLUGIN_DIR . 'includes/database/class-schema.php';
-		require_once SAW_LMS_PLUGIN_DIR . 'includes/database/class-migration-tool.php';
-
-		// Cache system.
+		/**
+		 * Cache system
+		 */
 		require_once SAW_LMS_PLUGIN_DIR . 'includes/cache/interface-cache-driver.php';
 		require_once SAW_LMS_PLUGIN_DIR . 'includes/cache/class-redis-driver.php';
 		require_once SAW_LMS_PLUGIN_DIR . 'includes/cache/class-database-driver.php';
 		require_once SAW_LMS_PLUGIN_DIR . 'includes/cache/class-transient-driver.php';
 		require_once SAW_LMS_PLUGIN_DIR . 'includes/cache/class-cache-manager.php';
 
-		// Models.
-		require_once SAW_LMS_PLUGIN_DIR . 'includes/models/class-course-model.php';
-		require_once SAW_LMS_PLUGIN_DIR . 'includes/models/class-section-model.php';
-		require_once SAW_LMS_PLUGIN_DIR . 'includes/models/class-lesson-model.php';
-		require_once SAW_LMS_PLUGIN_DIR . 'includes/models/class-quiz-model.php';
-		require_once SAW_LMS_PLUGIN_DIR . 'includes/models/class-model-loader.php';
+		/**
+		 * i18n
+		 */
+		require_once SAW_LMS_PLUGIN_DIR . 'includes/class-i18n.php';
 
-		// Post types.
-		require_once SAW_LMS_PLUGIN_DIR . 'includes/post-types/class-course.php';
-		require_once SAW_LMS_PLUGIN_DIR . 'includes/post-types/class-section.php';
-		require_once SAW_LMS_PLUGIN_DIR . 'includes/post-types/class-lesson.php';
-		require_once SAW_LMS_PLUGIN_DIR . 'includes/post-types/class-quiz.php';
-
-		// Admin.
+		/**
+		 * Admin classes (only in admin)
+		 */
 		if ( is_admin() ) {
 			require_once SAW_LMS_PLUGIN_DIR . 'admin/class-admin.php';
+			require_once SAW_LMS_PLUGIN_DIR . 'admin/class-admin-menu.php';
+			require_once SAW_LMS_PLUGIN_DIR . 'admin/class-admin-assets.php';
+
+			// Cache Test Page (if exists)
+			if ( file_exists( SAW_LMS_PLUGIN_DIR . 'admin/class-cache-test-page.php' ) ) {
+				require_once SAW_LMS_PLUGIN_DIR . 'admin/class-cache-test-page.php';
+			}
 		}
 
-		// Initialize cache manager.
-		$this->cache_manager = SAW_LMS_Cache_Manager::get_instance();
+		// Initialize loader
+		$this->loader = new SAW_LMS_Loader();
 	}
 
 	/**
-	 * Initialize hooks
+	 * Initialize Custom Post Types
 	 *
-	 * @since 1.0.0
-	 */
-	private function init_hooks() {
-		register_activation_hook( SAW_LMS_PLUGIN_FILE, array( $this, 'activate' ) );
-		register_deactivation_hook( SAW_LMS_PLUGIN_FILE, array( $this, 'deactivate' ) );
-
-		add_action( 'plugins_loaded', array( $this, 'init' ) );
-	}
-
-	/**
-	 * Initialize plugin
+	 * UPDATED in Phase 2.1: Separated CPT initialization with safety checks.
+	 * FIXED: Added file_exists() checks to prevent fatal errors.
 	 *
-	 * @since 1.0.0
+	 * @since 2.1.0
+	 * @since 2.1.1 Added safety checks for file existence.
+	 * @return void
 	 */
-	public function init() {
-		// Check if database migration is needed.
-		if ( SAW_LMS_Migration_Tool::needs_migration( SAW_LMS_DB_VERSION ) ) {
-			SAW_LMS_Migration_Tool::migrate( SAW_LMS_DB_VERSION );
+	private function init_post_types() {
+		// Define CPT files
+		$cpt_files = array(
+			'course'  => SAW_LMS_PLUGIN_DIR . 'includes/post-types/class-course.php',
+			'section' => SAW_LMS_PLUGIN_DIR . 'includes/post-types/class-section.php',
+			'lesson'  => SAW_LMS_PLUGIN_DIR . 'includes/post-types/class-lesson.php',
+			'quiz'    => SAW_LMS_PLUGIN_DIR . 'includes/post-types/class-quiz.php',
+		);
+
+		// Check if ALL CPT files exist before loading any
+		$all_files_exist = true;
+		$missing_files   = array();
+
+		foreach ( $cpt_files as $name => $file ) {
+			if ( ! file_exists( $file ) ) {
+				$all_files_exist = false;
+				$missing_files[] = $name;
+			}
 		}
 
-		// Initialize post types.
-		new SAW_LMS_Course();
-		new SAW_LMS_Section();
-		new SAW_LMS_Lesson();
-		new SAW_LMS_Quiz();
+		// If any files are missing, log error and return
+		if ( ! $all_files_exist ) {
+			if ( $this->logger ) {
+				$this->logger->warning(
+					'CPT files missing - skipping post type registration',
+					array(
+						'missing_files' => $missing_files,
+						'note'          => 'This is normal if you have not yet uploaded Phase 2.1 files',
+					)
+				);
+			}
 
-		// Initialize admin.
-		if ( is_admin() ) {
-			new SAW_LMS_Admin();
+			// Add admin notice for missing CPT files
+			add_action(
+				'admin_notices',
+				function () use ( $missing_files ) {
+					?>
+					<div class="notice notice-warning is-dismissible">
+						<p>
+							<strong>SAW LMS:</strong>
+							<?php
+							printf(
+								/* translators: %s: list of missing file names */
+								esc_html__( 'Custom Post Type files are missing: %s. Upload all files from Phase 2.1 to enable courses, sections, lessons, and quizzes.', 'saw-lms' ),
+								esc_html( implode( ', ', $missing_files ) )
+							);
+							?>
+						</p>
+					</div>
+					<?php
+				}
+			);
+
+			return; // Exit early - don't try to load CPTs
 		}
 
-		do_action( 'saw_lms_initialized' );
+		// All files exist - safe to load
+		require_once $cpt_files['course'];
+		require_once $cpt_files['section'];
+		require_once $cpt_files['lesson'];
+		require_once $cpt_files['quiz'];
+
+		// Initialize singletons
+		SAW_LMS_Course::init();
+		SAW_LMS_Section::init();
+		SAW_LMS_Lesson::init();
+		SAW_LMS_Quiz::init();
+
+		/**
+		 * Fires after all post types are initialized.
+		 *
+		 * @since 2.1.0
+		 */
+		do_action( 'saw_lms_post_types_initialized' );
+
+		// Log successful initialization
+		if ( $this->logger ) {
+			$this->logger->info( 'Custom Post Types initialized successfully' );
+		}
 	}
 
 	/**
-	 * Plugin activation
+	 * Setup error handling
+	 *
+	 * UPDATED v2.1.2: Now safe to call because we're in 'plugins_loaded' hook
 	 *
 	 * @since 1.0.0
 	 */
-	public function activate() {
-		// Create database tables.
-		$schema = new SAW_LMS_Schema();
-		$schema->create_tables();
+	private function setup_error_handling() {
+		// Initialize Logger first
+		$this->logger = SAW_LMS_Logger::init();
 
-		// Flush rewrite rules.
-		flush_rewrite_rules();
+		// Initialize Error Handler
+		$this->error_handler = SAW_LMS_Error_Handler::init();
 
-		do_action( 'saw_lms_activated' );
+		// Set logger in error handler
+		$this->error_handler->set_logger( $this->logger );
+
+		// Setup error handlers (now safe - WordPress functions available)
+		$this->error_handler->setup_handlers();
+
+		// Log plugin initialization
+		$this->logger->info(
+			'SAW LMS Plugin initialized',
+			array(
+				'version'     => $this->version,
+				'php_version' => PHP_VERSION,
+				'wp_version'  => get_bloginfo( 'version' ),
+			)
+		);
 	}
 
 	/**
-	 * Plugin deactivation
+	 * Initialize cache system
 	 *
 	 * @since 1.0.0
 	 */
-	public function deactivate() {
-		// Flush rewrite rules.
-		flush_rewrite_rules();
+	private function init_cache_system() {
+		// Initialize cache manager (auto-detects best driver)
+		$this->cache_manager = SAW_LMS_Cache_Manager::init();
 
-		do_action( 'saw_lms_deactivated' );
+		// Log which driver was selected
+		if ( $this->logger ) {
+			$this->logger->info(
+				'Cache system ready',
+				array(
+					'driver'    => $this->cache_manager->get_driver_name(),
+					'available' => $this->cache_manager->is_available(),
+				)
+			);
+		}
+	}
+
+	/**
+	 * Define the locale for this plugin for internationalization
+	 *
+	 * @since 1.0.0
+	 */
+	private function set_locale() {
+		$plugin_i18n = new SAW_LMS_i18n();
+		$this->loader->add_action( 'plugins_loaded', $plugin_i18n, 'load_plugin_textdomain' );
+	}
+
+	/**
+	 * Register all hooks related to admin area
+	 *
+	 * UPDATED in Phase 1.9: Added Admin Assets hooks.
+	 *
+	 * @since 1.0.0
+	 */
+	private function define_admin_hooks() {
+		if ( ! is_admin() ) {
+			return;
+		}
+
+		// Admin Assets (NEW in Phase 1.9)
+		$admin_assets = new SAW_LMS_Admin_Assets( $this->get_plugin_name(), $this->get_version() );
+		$this->loader->add_action( 'admin_enqueue_scripts', $admin_assets, 'enqueue_styles' );
+		$this->loader->add_action( 'admin_enqueue_scripts', $admin_assets, 'enqueue_scripts' );
+
+		// Admin Menu
+		$admin_menu = new SAW_LMS_Admin_Menu( $this->get_plugin_name(), $this->get_version() );
+		$this->loader->add_action( 'admin_menu', $admin_menu, 'add_menu' );
+
+		// Cache Test Page (if class exists)
+		if ( class_exists( 'SAW_LMS_Cache_Test_Page' ) ) {
+			$cache_test = new SAW_LMS_Cache_Test_Page( $this->get_plugin_name(), $this->get_version() );
+			$this->loader->add_action( 'admin_menu', $cache_test, 'add_menu_page' );
+		}
+	}
+
+	/**
+	 * Register all hooks related to public-facing functionality
+	 *
+	 * @since 1.0.0
+	 */
+	private function define_public_hooks() {
+		// TODO: Add public-facing hooks here when frontend is implemented
+	}
+
+	/**
+	 * Run the loader to execute all hooks
+	 *
+	 * @since 1.0.0
+	 */
+	public function run() {
+		$this->loader->run();
+	}
+
+	/**
+	 * The name of the plugin
+	 *
+	 * @since  1.0.0
+	 * @return string
+	 */
+	public function get_plugin_name() {
+		return $this->plugin_name;
+	}
+
+	/**
+	 * The reference to the class that orchestrates the hooks
+	 *
+	 * @since  1.0.0
+	 * @return SAW_LMS_Loader
+	 */
+	public function get_loader() {
+		return $this->loader;
+	}
+
+	/**
+	 * Retrieve the version number
+	 *
+	 * @since  1.0.0
+	 * @return string
+	 */
+	public function get_version() {
+		return $this->version;
+	}
+
+	/**
+	 * Get cache manager instance
+	 *
+	 * @since  1.0.0
+	 * @return SAW_LMS_Cache_Manager
+	 */
+	public function get_cache_manager() {
+		return $this->cache_manager;
+	}
+
+	/**
+	 * Get logger instance
+	 *
+	 * @since  1.0.0
+	 * @return SAW_LMS_Logger
+	 */
+	public function get_logger() {
+		return $this->logger;
+	}
+
+	/**
+	 * Get error handler instance
+	 *
+	 * @since  1.0.0
+	 * @return SAW_LMS_Error_Handler
+	 */
+	public function get_error_handler() {
+		return $this->error_handler;
 	}
 }
