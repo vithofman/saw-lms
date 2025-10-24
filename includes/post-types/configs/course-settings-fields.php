@@ -6,11 +6,12 @@
  * Maps to ALL columns in wp_saw_lms_courses database table.
  *
  * COMPLETE in v3.1.1: All database fields included.
+ * FIXED in v3.1.3: Removed truncated content, added missing fields.
  *
  * @package     SAW_LMS
  * @subpackage  Post_Types/Configs
  * @since       3.1.0
- * @version     3.1.1
+ * @version     3.1.3
  */
 
 // Exit if accessed directly.
@@ -24,11 +25,8 @@ return array(
 	 * ═══════════════════════════════════════════════════════════════════════
 	 * SEKCE 1: ZÁKLADNÍ NASTAVENÍ
 	 * ═══════════════════════════════════════════════════════════════════════
-	 * Mapuje: duration_minutes, passing_score_percent, progression_mode,
-	 *         require_all_lessons, require_all_quizzes
 	 */
 
-	// Delimiter pro vizuální oddělení sekcí.
 	'_section_basic' => array(
 		'type'        => 'heading',
 		'label'       => __( 'Basic Settings', 'saw-lms' ),
@@ -99,8 +97,6 @@ return array(
 	 * ═══════════════════════════════════════════════════════════════════════
 	 * SEKCE 2: ACCESS CONTROL & ENROLLMENT
 	 * ═══════════════════════════════════════════════════════════════════════
-	 * Mapuje: access_mode, enrollment_type, student_limit, start_date, end_date,
-	 *         access_period_days
 	 */
 
 	'_section_access' => array(
@@ -172,8 +168,6 @@ return array(
 	 * ═══════════════════════════════════════════════════════════════════════
 	 * SEKCE 3: PRICING (WooCommerce Integration)
 	 * ═══════════════════════════════════════════════════════════════════════
-	 * Mapuje: price, currency, product_id
-	 * NOTE: product_id je v courses table, ale typicky se spravuje přes WooCommerce
 	 */
 
 	'_section_pricing' => array(
@@ -214,20 +208,12 @@ return array(
 	 * ═══════════════════════════════════════════════════════════════════════
 	 * SEKCE 4: CERTIFICATES
 	 * ═══════════════════════════════════════════════════════════════════════
-	 * Mapuje: certificate_id, certificate_require_passing
 	 */
 
 	'_section_certificates' => array(
 		'type'        => 'heading',
 		'label'       => __( 'Certificates', 'saw-lms' ),
 		'description' => __( 'Certificate settings for course completion.', 'saw-lms' ),
-	),
-
-	'_saw_lms_certificate_enable' => array(
-		'type'        => 'checkbox',
-		'label'       => __( 'Enable Certificate', 'saw-lms' ),
-		'description' => __( 'Award a certificate upon course completion.', 'saw-lms' ),
-		'default'     => '',
 	),
 
 	'_saw_lms_certificate_id' => array(
@@ -251,7 +237,6 @@ return array(
 	 * ═══════════════════════════════════════════════════════════════════════
 	 * SEKCE 5: RECURRING COURSES (BOZP Compliance)
 	 * ═══════════════════════════════════════════════════════════════════════
-	 * Mapuje: is_recurring, recurrence_type, recurrence_interval, grace_period_days
 	 */
 
 	'_section_recurring' => array(
@@ -304,7 +289,6 @@ return array(
 	 * ═══════════════════════════════════════════════════════════════════════
 	 * SEKCE 6: GAMIFICATION
 	 * ═══════════════════════════════════════════════════════════════════════
-	 * Mapuje: body a odznaky (points system z fáze 19)
 	 */
 
 	'_section_gamification' => array(
@@ -337,7 +321,6 @@ return array(
 	 * ═══════════════════════════════════════════════════════════════════════
 	 * SEKCE 7: MARKETING & PROMO
 	 * ═══════════════════════════════════════════════════════════════════════
-	 * Mapuje: promo_video_url
 	 */
 
 	'_section_marketing' => array(
@@ -367,7 +350,6 @@ return array(
 	 * ═══════════════════════════════════════════════════════════════════════
 	 * SEKCE 8: ADVANCED SETTINGS
 	 * ═══════════════════════════════════════════════════════════════════════
-	 * Mapuje: prerequisites, email_notifications, custom_fields (JSON columns)
 	 */
 
 	'_section_advanced' => array(
@@ -407,8 +389,6 @@ return array(
 	 * ═══════════════════════════════════════════════════════════════════════
 	 * SEKCE 9: STATUS & METADATA (Read-only/Auto-managed)
 	 * ═══════════════════════════════════════════════════════════════════════
-	 * Mapuje: status, author_id, created_at, updated_at
-	 * NOTE: Většina těchto polí se spravuje automaticky
 	 */
 
 	'_section_metadata' => array(
@@ -449,4 +429,5 @@ return array(
 		'description' => __( 'Date and time of last modification (auto-updated).', 'saw-lms' ),
 		'default'     => '',
 	),
+
 );

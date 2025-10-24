@@ -7,7 +7,8 @@
  * @package    SAW_LMS
  * @subpackage SAW_LMS/assets/js/admin
  * @since      1.0.0
- * @version    1.9.0
+ * @version    1.9.1
+ * @fixed      Removed duplicate tab initializations (v1.9.1)
  */
 
 (function() {
@@ -307,82 +308,52 @@
 				if (btn.handler) {
 					const btnElement = modal.querySelector(`[data-action="${btn.action}"]`);
 					if (btnElement) {
-						btnElement.addEventListener('click', () => {
-							btn.handler(close);
+						btnElement.addEventListener('click', (e) => {
+							btn.handler(e, close);
 						});
 					}
 				}
 			});
 			
-			// ESC key to close
-			const escHandler = (e) => {
-				if (e.key === 'Escape') {
-					close();
-					document.removeEventListener('keydown', escHandler);
-				}
-			};
-			document.addEventListener('keydown', escHandler);
-			
-			// On open callback
+			// Trigger onOpen
 			if (options.onOpen) {
 				options.onOpen(modal);
 			}
 			
 			return {
-				element: modal,
+				modal: modal,
 				overlay: overlay,
 				close: close,
 			};
 		},
 
 		/**
-		 * Show confirmation dialog
+		 * Confirm dialog
 		 */
-		confirm: function(message, title, onConfirm) {
-			title = title || 'Confirm';
-			
-			return this.show({
-				title: title,
+		confirm: function(message, callback) {
+			this.show({
+				title: 'Potvrzení',
 				content: `<p>${message}</p>`,
+				size: 'sm',
 				buttons: [
 					{
-						text: 'Cancel',
+						text: 'Zrušit',
 						class: 'saw-btn-secondary',
 						action: 'cancel',
-						handler: (close) => close(),
-					},
-					{
-						text: 'Confirm',
-						class: 'saw-btn-primary',
-						action: 'confirm',
-						handler: (close) => {
-							if (onConfirm) {
-								onConfirm();
+						handler: (e, close) => {
+							if (callback) {
+								callback(false);
 							}
 							close();
 						},
 					},
-				],
-			});
-		},
-
-		/**
-		 * Show alert dialog
-		 */
-		alert: function(message, title, onClose) {
-			title = title || 'Alert';
-			
-			return this.show({
-				title: title,
-				content: `<p>${message}</p>`,
-				buttons: [
 					{
-						text: 'OK',
+						text: 'Potvrdit',
 						class: 'saw-btn-primary',
-						action: 'ok',
-						handler: (close) => {
-							if (onClose) {
-								onClose();
+						action: 'confirm',
+						handler: (e, close) => {
+							if (callback) {
+								callback(true);
 							}
 							close();
 						},
@@ -437,12 +408,13 @@
 
 	/**
 	 * ============================================
-	 * TABS FUNCTIONALITY
+	 * TABS FUNCTIONALITY (for .saw-tabs generic)
 	 * ============================================
 	 */
 	SAW_LMS_Admin.tabs = {
 		/**
 		 * Initialize tabs
+		 * This is for generic .saw-tabs with .saw-tabs-link elements
 		 */
 		init: function(tabsElement) {
 			if (typeof tabsElement === 'string') {
@@ -557,136 +529,50 @@
 	};
 
 	/**
- * ============================================
- * INITIALIZATION
- * ============================================
- */
-document.addEventListener('DOMContentLoaded', function() {
-	// Initialize tabs if present
-	const tabsElements = document.querySelectorAll('.saw-tabs');
-	tabsElements.forEach(tabs => {
-		SAW_LMS_Admin.tabs.init(tabs);
-	});
-	
-	// Initialize panels if present
-	SAW_LMS_Admin.panels.init();
-	
-	// Log that utilities are ready
-	if (window.console && window.console.log) {
-		console.log('SAW LMS Admin Utilities loaded');
-	}
-});
-
-/**
- * ============================================
- * META BOX TABS (jQuery)
- * ============================================
- */
-jQuery(document).ready(function($) {
-	$('.saw-tabs-wrapper').each(function() {
-		var $wrapper = $(this);
+	 * ============================================
+	 * INITIALIZATION
+	 * ============================================
+	 */
+	document.addEventListener('DOMContentLoaded', function() {
+		// Initialize tabs if present (generic .saw-tabs)
+		const tabsElements = document.querySelectorAll('.saw-tabs');
+		tabsElements.forEach(tabs => {
+			SAW_LMS_Admin.tabs.init(tabs);
+		});
 		
-		$wrapper.find('.saw-tab-button').on('click', function(e) {
-			e.preventDefault();
+		// Initialize panels if present
+		SAW_LMS_Admin.panels.init();
+		
+		// Log that utilities are ready
+		if (window.console && window.console.log) {
+			console.log('SAW LMS Admin Utilities loaded');
+		}
+	});
+
+	/**
+	 * ============================================
+	 * META BOX TABS (jQuery)
+	 * This is SEPARATE from generic tabs above.
+	 * Handles .saw-tabs-wrapper specifically for meta boxes.
+	 * ============================================
+	 */
+	jQuery(document).ready(function($) {
+		$('.saw-tabs-wrapper').each(function() {
+			var $wrapper = $(this);
 			
-			var $button = $(this);
-			var tabId = $button.data('tab');
-			
-			$wrapper.find('.saw-tab-button').removeClass('saw-tab-active');
-			$button.addClass('saw-tab-active');
-			
-			$wrapper.find('.saw-tab-content').removeClass('saw-tab-content-active');
-			$wrapper.find('.saw-tab-content[data-tab-content="' + tabId + '"]').addClass('saw-tab-content-active');
+			$wrapper.find('.saw-tab-button').on('click', function(e) {
+				e.preventDefault();
+				
+				var $button = $(this);
+				var tabId = $button.data('tab');
+				
+				$wrapper.find('.saw-tab-button').removeClass('saw-tab-active');
+				$button.addClass('saw-tab-active');
+				
+				$wrapper.find('.saw-tab-content').removeClass('saw-tab-content-active');
+				$wrapper.find('.saw-tab-content[data-tab-content="' + tabId + '"]').addClass('saw-tab-content-active');
+			});
 		});
 	});
-});
 
 })();
-
-/**
- * SAW Tabs Component
- *
- * Handles tab switching in admin meta boxes.
- *
- * @since 3.1.0
- */
-SAW_LMS.tabs = {
-    /**
-     * Initialize tabs
-     */
-    init: function() {
-        jQuery(document).on('click', '.saw-tab-button', function(e) {
-            e.preventDefault();
-
-            var $button = jQuery(this);
-            var tabId = $button.data('tab');
-            var $wrapper = $button.closest('.saw-tabs-wrapper');
-
-            // Update button states
-            $wrapper.find('.saw-tab-button').removeClass('saw-tab-active');
-            $button.addClass('saw-tab-active');
-
-            // Update content visibility
-            $wrapper.find('.saw-tab-content').removeClass('saw-tab-content-active');
-            $wrapper.find('.saw-tab-content[data-tab-content="' + tabId + '"]').addClass('saw-tab-content-active');
-        });
-    }
-};
-
-// Initialize tabs on document ready
-jQuery(document).ready(function() {
-    SAW_LMS.tabs.init();
-});
-
-javascript/**
- * SAW Tabs Component
- *
- * Handles tab switching in admin meta boxes.
- *
- * @since 3.1.0
- */
-jQuery(document).ready(function($) {
-    // Initialize tabs for meta boxes
-    $('.saw-tabs-wrapper').each(function() {
-        var $wrapper = $(this);
-        
-        $wrapper.find('.saw-tab-button').on('click', function(e) {
-            e.preventDefault();
-            
-            var $button = $(this);
-            var tabId = $button.data('tab');
-            
-            // Update button states
-            $wrapper.find('.saw-tab-button').removeClass('saw-tab-active');
-            $button.addClass('saw-tab-active');
-            
-            // Update content visibility
-            $wrapper.find('.saw-tab-content').removeClass('saw-tab-content-active');
-            $wrapper.find('.saw-tab-content[data-tab-content="' + tabId + '"]').addClass('saw-tab-content-active');
-        });
-    });
-});
-
-/**
- * SAW Tabs Component for Meta Boxes
- *
- * @since 3.1.0
- */
-jQuery(document).ready(function($) {
-    $('.saw-tabs-wrapper').each(function() {
-        var $wrapper = $(this);
-        
-        $wrapper.find('.saw-tab-button').on('click', function(e) {
-            e.preventDefault();
-            
-            var $button = $(this);
-            var tabId = $button.data('tab');
-            
-            $wrapper.find('.saw-tab-button').removeClass('saw-tab-active');
-            $button.addClass('saw-tab-active');
-            
-            $wrapper.find('.saw-tab-content').removeClass('saw-tab-content-active');
-            $wrapper.find('.saw-tab-content[data-tab-content="' + tabId + '"]').addClass('saw-tab-content-active');
-        });
-    });
-});
