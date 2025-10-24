@@ -8,11 +8,12 @@
  * UPDATED in Phase 1.9: Added Admin Assets loader for new design system.
  * UPDATED in Phase 2.1: Added Custom Post Types initialization.
  * FIXED: Added file_exists() checks before loading CPT files to prevent fatal errors.
+ * FIXED v0.1.1: Error handling moved to 'init' hook to prevent wp_mail() error.
  *
  * @package    SAW_LMS
  * @subpackage SAW_LMS/includes
  * @since      1.0.0
- * @version    2.1.1
+ * @version    0.1.1
  */
 
 // If this file is called directly, abort.
@@ -102,7 +103,7 @@ class SAW_LMS {
 	 * Constructor
 	 *
 	 * UPDATED in Phase 2.1: Added init_post_types() call.
-	 * FIXED: Moved init_post_types() AFTER error handling is set up.
+	 * FIXED v0.1.1: Moved error handling to 'init' hook to prevent wp_mail() error.
 	 *
 	 * @since 1.0.0
 	 */
@@ -111,9 +112,10 @@ class SAW_LMS {
 		$this->version     = SAW_LMS_VERSION;
 
 		$this->load_dependencies();
-		$this->setup_error_handling();  // ✅ FIRST: Setup error handling
-		$this->init_cache_system();
-		$this->init_post_types();       // ✅ THEN: Load CPTs (with error handling active)
+		// CHANGED v0.1.1: These are now called in run() method's init hook
+		// $this->setup_error_handling();
+		// $this->init_cache_system();
+		// $this->init_post_types();
 		$this->set_locale();
 		$this->define_admin_hooks();
 		$this->define_public_hooks();
@@ -367,10 +369,33 @@ class SAW_LMS {
 	/**
 	 * Run the loader to execute all hooks
 	 *
+	 * FIXED v0.1.1: Added delayed initialization to prevent wp_mail() error.
+	 *
 	 * @since 1.0.0
 	 */
 	public function run() {
+		// NEW v0.1.1: Initialize error handling, cache, and CPTs on 'init' hook
+		// This ensures WordPress is fully loaded and wp_mail() is available
+		add_action(
+			'init',
+			array( $this, 'delayed_initialization' ),
+			1 // Priority 1 = early, but after WordPress core
+		);
+
 		$this->loader->run();
+	}
+
+	/**
+	 * Delayed initialization
+	 *
+	 * Called on 'init' hook to ensure WordPress is fully loaded.
+	 *
+	 * @since 0.1.1
+	 */
+	public function delayed_initialization() {
+		$this->setup_error_handling();
+		$this->init_cache_system();
+		$this->init_post_types();
 	}
 
 	/**
